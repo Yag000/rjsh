@@ -1,0 +1,14 @@
+[package]
+name = "rjsh"
+version = "0.0.0"
+edition = "2021"
+authors = ["Yago Iglesias <yagoiglesias7@gmail.com>"]
+license = "MIT OR Apache-2.0"
+description = "Future job shell"
+readme = "README.md"
+homepage = "https://github.com/Yag000/rjsh"
+repository = "https://github.com/Yag000/rjsh"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
