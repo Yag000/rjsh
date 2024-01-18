@@ -1,4 +1,4 @@
-use rjsh::lexer::Lexer;
+use rjsh::parser::Parser;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
@@ -15,12 +15,13 @@ fn main() -> anyhow::Result<()> {
         let readline = rl.readline("$ ");
         match readline {
             Ok(line) => {
-                let mut lexer = Lexer::new(line.clone());
-                while let Some(token) = lexer.next_token() {
-                    println!("Token: {}", token);
+                let mut parser = Parser::new(line.clone());
+                if let Some(command) = parser.parse_command() {
+                    println!("command: {}", command);
+                    rl.add_history_entry(line)?;
+                } else {
+                    eprintln!("syntax error");
                 }
-
-                rl.add_history_entry(line.as_str())?;
             }
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");
