@@ -1,5 +1,14 @@
+use std::fmt::{self, Display, Formatter};
+
 #[derive(Debug, PartialEq)]
 pub enum Token {
     String(String),
-    EOF,
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Token::String(s) => write!(f, "{}", s),
+        }
+    }
 }

@@ -52,16 +52,14 @@ impl Lexer {
         self.input[position..self.position].iter().collect()
     }
 
-    pub fn next_token(&mut self) -> Token {
+    pub fn next_token(&mut self) -> Option<Token> {
         self.skip_whitespace();
-        let tok = match self.ch {
-            Some(ch) => match ch {
-                _ => Token::String(self.read_identifier()),
-            },
-            None => Token::EOF,
+        let ch = self.ch?;
+        let tok = match ch {
+            _ => Token::String(self.read_identifier()),
         };
         self.read_char();
-        tok
+        Some(tok)
     }
 }
 
@@ -72,7 +70,7 @@ mod tests {
 
     fn test_eof(input: String) {
         let mut lexer = Lexer::new(input);
-        assert_eq!(lexer.next_token(), Token::EOF);
+        assert_eq!(lexer.next_token(), None);
     }
 
     #[test]
@@ -86,10 +84,9 @@ mod tests {
         test_eof("  \n     \t  \r   ".to_string());
     }
 
-
     fn test_identifier(input: String, expected: String) {
         let mut lexer = Lexer::new(input);
-        assert_eq!(lexer.next_token(), Token::String(expected));
+        assert_eq!(lexer.next_token(), Some(Token::String(expected)));
     }
 
     #[test]
@@ -103,9 +100,9 @@ mod tests {
     #[test]
     fn test_next_token_multiple_identifiers() {
         let mut lexer = Lexer::new("a b c".to_string());
-        assert_eq!(lexer.next_token(), Token::String("a".to_string()));
-        assert_eq!(lexer.next_token(), Token::String("b".to_string()));
-        assert_eq!(lexer.next_token(), Token::String("c".to_string()));
-        assert_eq!(lexer.next_token(), Token::EOF);
+        assert_eq!(lexer.next_token(), Some(Token::String("a".to_string())));
+        assert_eq!(lexer.next_token(), Some(Token::String("b".to_string())));
+        assert_eq!(lexer.next_token(), Some(Token::String("c".to_string())));
+        assert_eq!(lexer.next_token(), None);
     }
 }
