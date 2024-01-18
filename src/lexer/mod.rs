@@ -52,6 +52,7 @@ impl Lexer {
         self.input[position..self.position].iter().collect()
     }
 
+    #[allow(clippy::match_single_binding)] //TODO: remove this
     pub fn next_token(&mut self) -> Option<Token> {
         self.skip_whitespace();
         let ch = self.ch?;
