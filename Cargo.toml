@@ -12,3 +12,6 @@ repository = "https://github.com/Yag000/rjsh"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.79"
+home = "0.5.9"
+rustyline = { version = "13.0.0", features = ["with-dirs", "with-file-history"] }
