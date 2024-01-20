@@ -1,5 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
+#[derive(Debug)]
 pub struct Command {
     pub args: Vec<String>,
 }

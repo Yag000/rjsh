@@ -1,4 +1,5 @@
 use rjsh::parser::Parser;
+use rjsh::shell::Shell;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
@@ -11,14 +12,18 @@ fn main() -> anyhow::Result<()> {
         std::fs::File::create(&history_path)?;
     }
 
+    let mut shell = rjsh::shell::DefaultShell::default();
+
     loop {
         let readline = rl.readline("$ ");
         match readline {
             Ok(line) => {
                 let mut parser = Parser::new(line.clone());
                 if let Some(command) = parser.parse_command() {
-                    println!("command: {}", command);
-                    rl.add_history_entry(line)?;
+                    if command.args.len() > 0 {
+                        rl.add_history_entry(line)?;
+                        shell.execute_command(&command)?;
+                    }
                 } else {
                     eprintln!("syntax error");
                 }
