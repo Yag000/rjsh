@@ -6,14 +6,9 @@ pub trait Shell {
     fn exit_code(&self) -> i32;
 }
 
+#[derive(Default, Debug)]
 pub struct DefaultShell {
     exit_code: i32,
-}
-
-impl Default for DefaultShell {
-    fn default() -> Self {
-        Self { exit_code: 0 }
-    }
 }
 
 fn ast_to_command(ast: &crate::parser::ast::Command) -> Command {
@@ -24,7 +19,7 @@ fn ast_to_command(ast: &crate::parser::ast::Command) -> Command {
 
 impl Shell for DefaultShell {
     fn execute_command(&mut self, command: &crate::parser::ast::Command) -> anyhow::Result<()> {
-        let mut cmd = ast_to_command(&command);
+        let mut cmd = ast_to_command(command);
         let exit = cmd.status()?;
         self.exit_code = exit
             .code()

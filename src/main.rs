@@ -20,7 +20,7 @@ fn main() -> anyhow::Result<()> {
             Ok(line) => {
                 let mut parser = Parser::new(line.clone());
                 if let Some(command) = parser.parse_command() {
-                    if command.args.len() > 0 {
+                    if !command.args.is_empty() {
                         rl.add_history_entry(line)?;
                         shell.execute_command(&command)?;
                     }
