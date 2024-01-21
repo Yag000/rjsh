@@ -12,8 +12,7 @@ fn set_new_cwd(dir: &str) -> anyhow::Result<()> {
 impl BuiltIn for Cd {
     fn call(&self, args: &[String]) -> anyhow::Result<i32> {
         if args.len() > 1 {
-            eprintln!("cd: too many arguments");
-            return Ok(1);
+            return Err(anyhow::anyhow!("too many arguments"));
         }
         if args.is_empty() {
             let home = std::env::var("HOME")?;

@@ -1,4 +1,9 @@
-use std::process::Command;
+use std::{
+    os::unix::process::ExitStatusExt,
+    process::{Command, ExitStatus},
+};
+
+use crate::error::UnwrapPrintError;
 
 pub trait Shell {
     fn execute_command(&mut self, command: &crate::parser::ast::Command) -> anyhow::Result<()>;
@@ -21,16 +26,28 @@ impl Shell for DefaultShell {
     fn execute_command(&mut self, command: &crate::parser::ast::Command) -> anyhow::Result<()> {
         match crate::builtins::get_builtin(command) {
             Some(builtin) => {
-                self.exit_code = builtin.call(&command.args)?;
+                self.exit_code = builtin.call(&command.args).unwrap_error_with_print();
             }
             None => {
                 let mut cmd = ast_to_command(command);
                 // Handle NONE if it was stopped/killed by a signal
-                let exit = cmd.status()?;
-                self.exit_code = exit
+                let exit = match cmd.status() {
+                    Ok(status) => status,
+                    Err(err) => {
+                        eprintln!("rjsh: {}", err);
+                        ExitStatus::from_raw(1)
+                    }
+                };
+                self.exit_code = match exit
                     // Handle NONE if it was stopped/killed by a signal
                     .code()
-                    .ok_or(anyhow::anyhow!("process exited with signal"))?;
+                {
+                    Some(code) => code,
+                    None => {
+                        eprintln!("rjsh: terminated by signal");
+                        1
+                    }
+                };
             }
         }
         Ok(())
