@@ -40,6 +40,7 @@ impl Lexer {
         }
     }
 
+    #[allow(dead_code)]
     pub fn read_identifier(&mut self) -> String {
         let position = self.position;
         while let Some(ch) = self.ch {
@@ -52,12 +53,23 @@ impl Lexer {
         self.input[position..self.position].iter().collect()
     }
 
+    pub fn read_string(&mut self) -> String {
+        let position = self.position;
+        while let Some(ch) = self.ch {
+            if ch.is_whitespace() {
+                break;
+            }
+            self.read_char();
+        }
+        self.input[position..self.position].iter().collect()
+    }
+
     #[allow(clippy::match_single_binding)] //TODO: remove this
     pub fn next_token(&mut self) -> Option<Token> {
         self.skip_whitespace();
         let ch = self.ch?;
         let tok = match ch {
-            _ => Token::String(self.read_identifier()),
+            _ => Token::String(self.read_string()),
         };
         self.read_char();
         Some(tok)

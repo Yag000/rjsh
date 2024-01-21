@@ -32,7 +32,15 @@ impl Parser {
 
     #[allow(unreachable_patterns)]
     pub fn parse_command(&mut self) -> Option<Command> {
-        let mut args = Vec::new();
+        let name = match self.current_token.clone() {
+            Some(Token::String(s)) => s,
+            _ => return None,
+        };
+
+        self.read_token();
+
+        let mut args = vec![];
+
         while let Some(tok) = self.current_token.clone() {
             match tok {
                 Token::String(s) => args.push(s),
@@ -41,6 +49,6 @@ impl Parser {
             self.read_token();
         }
 
-        Some(Command::new(args))
+        Some(Command::new(name, args))
     }
 }

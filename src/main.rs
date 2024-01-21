@@ -18,9 +18,12 @@ fn main() -> anyhow::Result<()> {
         let readline = rl.readline("$ ");
         match readline {
             Ok(line) => {
+                if line.trim() == "" {
+                    continue;
+                }
                 let mut parser = Parser::new(line.clone());
                 if let Some(command) = parser.parse_command() {
-                    if !command.args.is_empty() {
+                    if command.name != "" {
                         rl.add_history_entry(line)?;
                         shell.execute_command(&command)?;
                     }

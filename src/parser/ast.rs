@@ -2,6 +2,7 @@ use std::fmt::{self, Display, Formatter};
 
 #[derive(Debug)]
 pub struct Command {
+    pub name: String,
     pub args: Vec<String>,
 }
 
@@ -15,7 +16,7 @@ impl Display for Command {
 }
 
 impl Command {
-    pub fn new(args: Vec<String>) -> Command {
-        Command { args }
+    pub fn new(name: String, args: Vec<String>) -> Command {
+        Command { name, args }
     }
 }

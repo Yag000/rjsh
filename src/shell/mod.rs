@@ -12,18 +12,27 @@ pub struct DefaultShell {
 }
 
 fn ast_to_command(ast: &crate::parser::ast::Command) -> Command {
-    let mut cmd = Command::new(&ast.args[0]);
-    cmd.args(&ast.args[1..]);
+    let mut cmd = Command::new(&ast.name);
+    cmd.args(&ast.args);
     cmd
 }
 
 impl Shell for DefaultShell {
     fn execute_command(&mut self, command: &crate::parser::ast::Command) -> anyhow::Result<()> {
-        let mut cmd = ast_to_command(command);
-        let exit = cmd.status()?;
-        self.exit_code = exit
-            .code()
-            .ok_or(anyhow::anyhow!("process exited with signal"))?;
+        match crate::builtins::get_builtin(command) {
+            Some(builtin) => {
+                self.exit_code = builtin.call(&command.args)?;
+            }
+            None => {
+                let mut cmd = ast_to_command(command);
+                // Handle NONE if it was stopped/killed by a signal
+                let exit = cmd.status()?;
+                self.exit_code = exit
+                    // Handle NONE if it was stopped/killed by a signal
+                    .code()
+                    .ok_or(anyhow::anyhow!("process exited with signal"))?;
+            }
+        }
         Ok(())
     }
 
