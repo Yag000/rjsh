@@ -1,3 +1,5 @@
+use colored::Colorize;
+
 pub fn get_prompt() -> anyhow::Result<String> {
     let cwd = std::env::current_dir()?;
     let cwd = cwd
@@ -11,5 +13,7 @@ pub fn get_prompt() -> anyhow::Result<String> {
         cwd
     };
 
-    Ok(format!("{} $ ", new_cwd))
+    let invite = "$".green();
+    let prompt = format!("{} {} ", new_cwd.blue(), invite);
+    Ok(prompt)
 }

@@ -12,7 +12,6 @@ fn main() -> anyhow::Result<()> {
     if rl.load_history(&history_path).is_err() {
         std::fs::File::create(&history_path)?;
     }
-
     let mut shell = rjsh::shell::DefaultShell::default();
 
     loop {
