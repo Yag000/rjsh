@@ -1,4 +1,5 @@
 use rjsh::parser::Parser;
+use rjsh::prompt::get_prompt;
 use rjsh::shell::Shell;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
@@ -15,7 +16,8 @@ fn main() -> anyhow::Result<()> {
     let mut shell = rjsh::shell::DefaultShell::default();
 
     loop {
-        let readline = rl.readline("$ ");
+        let prompt = get_prompt().unwrap_or_else(|_| String::from("$ "));
+        let readline = rl.readline(prompt.as_str());
         match readline {
             Ok(line) => {
                 if line.trim() == "" {
