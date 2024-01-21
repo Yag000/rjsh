@@ -1,5 +1,5 @@
 use std::{
-    os::{ unix::process::ExitStatusExt},
+    os::unix::process::ExitStatusExt,
     process::{Command, ExitStatus},
 };
 
