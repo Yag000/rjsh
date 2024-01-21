@@ -1,5 +1,5 @@
 use std::{
-    os::unix::process::ExitStatusExt,
+    os::{self, unix::process::ExitStatusExt},
     process::{Command, ExitStatus},
 };
 
@@ -8,12 +8,12 @@ use crate::error::UnwrapPrintError;
 pub trait Shell {
     fn execute_command(&mut self, command: &crate::parser::ast::Command) -> anyhow::Result<()>;
 
-    fn exit_code(&self) -> i32;
+    fn last_exit_code(&self) -> i32;
 }
 
 #[derive(Default, Debug)]
 pub struct DefaultShell {
-    exit_code: i32,
+    last_exit_code: i32,
 }
 
 fn ast_to_command(ast: &crate::parser::ast::Command) -> Command {
@@ -26,7 +26,7 @@ impl Shell for DefaultShell {
     fn execute_command(&mut self, command: &crate::parser::ast::Command) -> anyhow::Result<()> {
         match crate::builtins::get_builtin(command) {
             Some(builtin) => {
-                self.exit_code = builtin.call(&command.args).unwrap_error_with_print();
+                self.last_exit_code = builtin.call(&command.args).unwrap_error_with_print();
             }
             None => {
                 let mut cmd = ast_to_command(command);
@@ -38,7 +38,7 @@ impl Shell for DefaultShell {
                         ExitStatus::from_raw(1)
                     }
                 };
-                self.exit_code = match exit
+                self.last_exit_code = match exit
                     // Handle NONE if it was stopped/killed by a signal
                     .code()
                 {
@@ -50,10 +50,11 @@ impl Shell for DefaultShell {
                 };
             }
         }
+        std::env::set_var("?", self.last_exit_code.to_string());
         Ok(())
     }
 
-    fn exit_code(&self) -> i32 {
-        self.exit_code
+    fn last_exit_code(&self) -> i32 {
+        self.last_exit_code
     }
 }
