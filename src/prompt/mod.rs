@@ -1,6 +1,8 @@
 use colored::Colorize;
 
-pub fn get_prompt() -> anyhow::Result<String> {
+use crate::shell::Shell;
+
+pub fn get_prompt(shell: &dyn Shell) -> anyhow::Result<String> {
     let cwd = std::env::current_dir()?;
     let cwd = cwd
         .to_str()
@@ -13,7 +15,10 @@ pub fn get_prompt() -> anyhow::Result<String> {
         cwd
     };
 
-    let invite = "$".green();
-    let prompt = format!("{} {} ", new_cwd.blue(), invite);
+    let invite = match shell.last_exit_code() {
+        0 => "$ ".green(),
+        _ => "$ ".red(),
+    };
+    let prompt = format!("{} {}", new_cwd.blue(), invite);
     Ok(prompt)
 }

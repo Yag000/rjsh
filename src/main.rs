@@ -15,7 +15,7 @@ fn main() -> anyhow::Result<()> {
     let mut shell = rjsh::shell::DefaultShell::default();
 
     loop {
-        let prompt = get_prompt().unwrap_or_else(|_| String::from("$ "));
+        let prompt = get_prompt(&shell).unwrap_or_else(|_| String::from("$ "));
         let readline = rl.readline(prompt.as_str());
         match readline {
             Ok(line) => {
