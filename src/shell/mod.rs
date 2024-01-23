@@ -9,11 +9,17 @@ pub trait Shell {
     fn execute_command(&mut self, command: &crate::parser::ast::Command) -> anyhow::Result<()>;
 
     fn last_exit_code(&self) -> i32;
+
+    fn exit(&mut self);
+
+    fn should_exit(&self) -> bool;
 }
 
 #[derive(Default, Debug)]
 pub struct DefaultShell {
     last_exit_code: i32,
+
+    should_exit: bool,
 }
 
 fn ast_to_command(ast: &crate::parser::ast::Command) -> Command {
@@ -26,7 +32,7 @@ impl Shell for DefaultShell {
     fn execute_command(&mut self, command: &crate::parser::ast::Command) -> anyhow::Result<()> {
         match crate::builtins::get_builtin(command) {
             Some(builtin) => {
-                self.last_exit_code = builtin.call(&command.args).unwrap_error_with_print();
+                self.last_exit_code = builtin.call(self, &command.args).unwrap_error_with_print();
             }
             None => {
                 let mut cmd = ast_to_command(command);
@@ -56,5 +62,13 @@ impl Shell for DefaultShell {
 
     fn last_exit_code(&self) -> i32 {
         self.last_exit_code
+    }
+
+    fn exit(&mut self) {
+        self.should_exit = true;
+    }
+
+    fn should_exit(&self) -> bool {
+        self.should_exit
     }
 }

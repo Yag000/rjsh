@@ -14,7 +14,7 @@ fn main() -> anyhow::Result<()> {
     }
     let mut shell = rjsh::shell::DefaultShell::default();
 
-    loop {
+    while !shell.should_exit() {
         let prompt = get_prompt(&shell).unwrap_or_else(|_| String::from("$ "));
         let readline = rl.readline(prompt.as_str());
         match readline {
@@ -48,5 +48,6 @@ fn main() -> anyhow::Result<()> {
     }
 
     rl.save_history(&history_path)?;
-    Ok(())
+
+    std::process::exit(shell.last_exit_code());
 }
