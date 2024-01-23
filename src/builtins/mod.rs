@@ -13,7 +13,7 @@ pub trait BuiltIn {
 pub fn get_builtin(command: &crate::parser::ast::Command) -> Option<Box<dyn BuiltIn>> {
     match command.name.as_str() {
         "cd" => Some(Box::new(Cd {})),
-        "exit" => Some(Box::new(Exit{})),
+        "exit" => Some(Box::new(Exit {})),
         _ => None,
     }
 }
