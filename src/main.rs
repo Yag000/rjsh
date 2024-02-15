@@ -23,13 +23,14 @@ fn main() -> anyhow::Result<()> {
                     continue;
                 }
                 let mut parser = Parser::new(line.clone());
-                if let Some(command) = parser.parse_command() {
-                    if !command.name.is_empty() {
-                        rl.add_history_entry(line)?;
-                        shell.execute_command(&command)?;
+                match parser.parse_command() {
+                    Ok(command) => {
+                        if !command.name.is_empty() {
+                            rl.add_history_entry(line)?;
+                            shell.execute_command(&command)?;
+                        }
                     }
-                } else {
-                    eprintln!("syntax error");
+                    Err(e) => eprintln!("{e}"),
                 }
             }
             Err(ReadlineError::Interrupted) => {

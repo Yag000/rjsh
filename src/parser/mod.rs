@@ -1,9 +1,32 @@
+use std::fmt::Display;
+
 use crate::{
     lexer::{token::Token, Lexer},
     parser::ast::Command,
 };
 
 pub mod ast;
+
+#[derive(Debug)]
+pub struct ParseError {
+    message: String,
+    token: Option<Token>,
+}
+
+impl Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.token {
+            Some(token) => write!(f, "rjsh: parse error near : {token}\n{}", self.message),
+            None => write!(f, "rjsh: {}", self.message),
+        }
+    }
+}
+
+impl ParseError {
+    fn new(message: String, token: Option<Token>) -> Self {
+        ParseError { message, token }
+    }
+}
 
 pub struct Parser {
     lexer: Lexer,
@@ -31,10 +54,10 @@ impl Parser {
     }
 
     #[allow(unreachable_patterns)]
-    pub fn parse_command(&mut self) -> Option<Command> {
+    pub fn parse_command(&mut self) -> Result<Command, ParseError> {
         let name = match self.current_token.clone() {
             Some(Token::String(s)) => s,
-            _ => return None,
+            token => return Err(ParseError::new(String::from("Unknown token"), token)),
         };
 
         self.read_token();
@@ -49,7 +72,7 @@ impl Parser {
             self.read_token();
         }
 
-        Some(Command::new(name, args))
+        Ok(Command::new(name, args))
     }
 }
 
@@ -59,7 +82,7 @@ mod tests {
 
     fn test_empty(input: String) {
         let mut parser = Parser::new(input);
-        assert_eq!(parser.parse_command(), None);
+        assert!(parser.parse_command().is_err());
     }
 
     #[test]
@@ -75,7 +98,7 @@ mod tests {
 
     fn test_comamnd(input: String, expected_name: String, expected_args: Vec<String>) {
         let command = Parser::new(input).parse_command();
-        assert_ne!(command, None);
+        assert!(!command.is_err());
         let command = command.unwrap();
         assert_eq!(
             command,
