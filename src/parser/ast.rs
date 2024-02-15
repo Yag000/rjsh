@@ -47,9 +47,9 @@ impl TryFrom<Token> for RedirectionPermission {
 
 #[derive(Debug, PartialEq)]
 pub struct Redirection {
-    redirectee: Redirectee,
-    type_: RedirectionType,
-    permissions: RedirectionPermission,
+    pub redirectee: Redirectee,
+    pub type_: RedirectionType,
+    pub permissions: RedirectionPermission,
 }
 
 impl TryFrom<(Token, String)> for Redirection {
@@ -62,6 +62,20 @@ impl TryFrom<(Token, String)> for Redirection {
             permissions,
             redirectee: Redirectee::FileName(s),
         })
+    }
+}
+
+impl Redirection {
+    pub fn new(
+        redirectee: Redirectee,
+        type_: RedirectionType,
+        permissions: RedirectionPermission,
+    ) -> Self {
+        Redirection {
+            type_,
+            permissions,
+            redirectee,
+        }
     }
 }
 
@@ -82,11 +96,11 @@ impl Display for Command {
 }
 
 impl Command {
-    pub fn new(name: String, args: Vec<String>) -> Command {
+    pub fn new(name: String, args: Vec<String>, redirections: Vec<Redirection>) -> Command {
         Command {
             name,
             args,
-            redirections: Vec::new(),
+            redirections,
         }
     }
 }
