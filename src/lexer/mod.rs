@@ -64,15 +64,60 @@ impl Lexer {
         self.input[position..self.position].iter().collect()
     }
 
+    fn match_rangle(&mut self) -> Token {
+        match self.peek_char() {
+            '|' => {
+                self.read_char();
+                Token::RangleF
+            }
+            '>' => {
+                self.read_char();
+                Token::DoubleRangle
+            }
+            _ => Token::Rangle,
+        }
+    }
+
+    fn match_rangle2(&mut self) -> Token {
+        match self.peek_char() {
+            '>' => {
+                self.read_char();
+                match self.peek_char() {
+                    '|' => {
+                        self.read_char();
+                        Token::Rangle2F
+                    }
+                    '>' => {
+                        self.read_char();
+                        Token::DoubleRangle2
+                    }
+                    _ => Token::Rangle2,
+                }
+            }
+            _ => Token::String(self.read_string()),
+        }
+    }
+
     #[allow(clippy::match_single_binding)] //TODO: remove this
     pub fn next_token(&mut self) -> Option<Token> {
         self.skip_whitespace();
         let ch = self.ch?;
         let tok = match ch {
+            '<' => Token::Langle,
+            '>' => self.match_rangle(),
+            '2' => self.match_rangle2(),
             _ => Token::String(self.read_string()),
         };
         self.read_char();
         Some(tok)
+    }
+
+    fn peek_char(&self) -> char {
+        if self.read_position >= self.input.len() {
+            '\0'
+        } else {
+            self.input[self.read_position]
+        }
     }
 }
 
@@ -116,6 +161,19 @@ mod tests {
         assert_eq!(lexer.next_token(), Some(Token::String("a".to_string())));
         assert_eq!(lexer.next_token(), Some(Token::String("b".to_string())));
         assert_eq!(lexer.next_token(), Some(Token::String("c".to_string())));
+        assert_eq!(lexer.next_token(), None);
+    }
+
+    #[test]
+    fn test_redirection_tokens() {
+        let mut lexer = Lexer::new("< > 2> >| 2>| >> 2>>".to_string());
+        assert_eq!(lexer.next_token(), Some(Token::Langle));
+        assert_eq!(lexer.next_token(), Some(Token::Rangle));
+        assert_eq!(lexer.next_token(), Some(Token::Rangle2));
+        assert_eq!(lexer.next_token(), Some(Token::RangleF));
+        assert_eq!(lexer.next_token(), Some(Token::Rangle2F));
+        assert_eq!(lexer.next_token(), Some(Token::DoubleRangle));
+        assert_eq!(lexer.next_token(), Some(Token::DoubleRangle2));
         assert_eq!(lexer.next_token(), None);
     }
 }

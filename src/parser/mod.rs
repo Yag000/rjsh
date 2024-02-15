@@ -55,7 +55,6 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     fn test_empty(input: String) {
@@ -82,7 +81,8 @@ mod tests {
             command,
             Command {
                 name: expected_name,
-                args: expected_args
+                args: expected_args,
+                redirections: Vec::new(),
             }
         )
     }
