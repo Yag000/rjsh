@@ -34,15 +34,13 @@ fn main() -> anyhow::Result<()> {
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                println!("CTRL-C");
                 break;
             }
             Err(ReadlineError::Eof) => {
-                println!("CTRL-D");
                 break;
             }
             Err(err) => {
-                println!("Error: {:?}", err);
+                println!("rjsh: {:?}", err);
                 break;
             }
         }
