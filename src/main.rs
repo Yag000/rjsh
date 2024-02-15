@@ -1,11 +1,11 @@
+use rjsh::editor::RjshEditor;
 use rjsh::parser::Parser;
 use rjsh::prompt::get_prompt;
 use rjsh::shell::Shell;
 use rustyline::error::ReadlineError;
-use rustyline::DefaultEditor;
 
 fn main() -> anyhow::Result<()> {
-    let mut rl = DefaultEditor::new()?;
+    let mut rl = RjshEditor::new()?;
 
     let home_dir = std::env::var("HOME")?;
     let history_path = format!("{}/.rjsh_history", home_dir);
