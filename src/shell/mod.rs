@@ -64,7 +64,7 @@ impl Shell for DefaultShell {
             }
             None => {
                 let mut cmd = ast_to_command(command);
-                // Handle NONE if it was stopped/killed by a signal
+                //TODO: Handle NONE if it was stopped/killed by a signal
                 let exit = match cmd.status() {
                     Ok(status) => status,
                     Err(err) => {
@@ -72,10 +72,8 @@ impl Shell for DefaultShell {
                         ExitStatus::from_raw(1)
                     }
                 };
-                self.last_exit_code = match exit
-                    // Handle NONE if it was stopped/killed by a signal
-                    .code()
-                {
+                //TODO: Handle NONE if it was stopped/killed by a signal
+                self.last_exit_code = match exit.code() {
                     Some(code) => code,
                     None => {
                         eprintln!("rjsh: terminated by signal");

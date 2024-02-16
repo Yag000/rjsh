@@ -208,12 +208,12 @@ mod tests {
         test_simple_redirection(
             ">|".into(),
             RedirectionType::Stdout,
-            RedirectionPermission::Destroy,
+            RedirectionPermission::Truncate,
         );
         test_simple_redirection(
             "2>|".into(),
             RedirectionType::Stderr,
-            RedirectionPermission::Destroy,
+            RedirectionPermission::Truncate,
         );
 
         test_simple_redirection(
@@ -249,7 +249,7 @@ mod tests {
             Redirection::new(
                 Redirectee::FileName("c".into()),
                 RedirectionType::Stderr,
-                RedirectionPermission::Destroy,
+                RedirectionPermission::Truncate,
             ),
             Redirection::new(
                 Redirectee::FileName("d".into()),
