@@ -139,6 +139,7 @@ mod tests {
                 name: expected_name,
                 args: expected_args,
                 redirections: Vec::new(),
+                background: false,
             }
         )
     }

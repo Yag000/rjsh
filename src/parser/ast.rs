@@ -84,6 +84,7 @@ pub struct Command {
     pub name: String,
     pub args: Vec<String>,
     pub redirections: Vec<Redirection>,
+    pub background: bool,
 }
 
 impl Display for Command {
@@ -101,6 +102,7 @@ impl Command {
             name,
             args,
             redirections,
+            background: false,
         }
     }
 }
