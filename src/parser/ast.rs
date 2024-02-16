@@ -2,10 +2,10 @@ use std::fmt::{self, Display, Formatter};
 
 use crate::lexer::token::Token;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Redirectee {
     FileName(String),
-    FileDescriptor(u32),
+    FileDescriptor(i32),
 }
 
 #[derive(Debug, PartialEq)]
@@ -29,7 +29,7 @@ impl TryFrom<Token> for RedirectionType {
 
 #[derive(Debug, PartialEq)]
 pub enum RedirectionPermission {
-    Destroy,
+    Truncate,
     Append,
     Standard,
 }
@@ -38,7 +38,7 @@ impl TryFrom<Token> for RedirectionPermission {
     fn try_from(value: Token) -> Result<Self, Self::Error> {
         match value {
             Token::Langle | Token::Rangle | Token::Rangle2 => Ok(RedirectionPermission::Standard),
-            Token::Rangle2F | Token::RangleF => Ok(RedirectionPermission::Destroy),
+            Token::Rangle2F | Token::RangleF => Ok(RedirectionPermission::Truncate),
             Token::DoubleRangle2 | Token::DoubleRangle => Ok(RedirectionPermission::Append),
             _ => Err("Invalid redirection marker".into()),
         }
