@@ -1,9 +1,13 @@
 use std::{
-    os::unix::process::ExitStatusExt,
-    process::{Command, ExitStatus},
+    fs::OpenOptions,
+    os::unix::{io::FromRawFd, process::ExitStatusExt},
+    process::{Command, ExitStatus, Stdio},
 };
 
-use crate::error::UnwrapPrintError;
+use crate::{
+    error::UnwrapPrintError,
+    parser::ast::{Redirectee, Redirection, RedirectionPermission, RedirectionType},
+};
 
 pub trait Shell {
     fn execute_command(&mut self, command: &crate::parser::ast::Command) -> anyhow::Result<()>;
@@ -18,13 +22,37 @@ pub trait Shell {
 #[derive(Default, Debug)]
 pub struct DefaultShell {
     last_exit_code: i32,
-
     should_exit: bool,
+}
+
+fn redirection_to_raw_fd(redirection: &Redirection) -> Stdio {
+    match redirection.redirectee.clone() {
+        Redirectee::FileName(path) => {
+            let file = OpenOptions::new()
+                .create(redirection.type_ != RedirectionType::Stdin)
+                .write(redirection.type_ != RedirectionType::Stdin)
+                .read(redirection.type_ == RedirectionType::Stdin)
+                .truncate(redirection.permissions == RedirectionPermission::Truncate)
+                .append(redirection.permissions == RedirectionPermission::Append)
+                .open(path)
+                .unwrap();
+            Stdio::from(file)
+        }
+        Redirectee::FileDescriptor(fd) => unsafe { Stdio::from_raw_fd(fd) },
+    }
 }
 
 fn ast_to_command(ast: &crate::parser::ast::Command) -> Command {
     let mut cmd = Command::new(&ast.name);
     cmd.args(&ast.args);
+    ast.redirections.iter().fold(&mut cmd, |acc, r| {
+        let file = redirection_to_raw_fd(r);
+        match r.type_ {
+            RedirectionType::Stdin => acc.stdin(file),
+            RedirectionType::Stdout => acc.stdout(file),
+            RedirectionType::Stderr => acc.stderr(file),
+        }
+    });
     cmd
 }
 
