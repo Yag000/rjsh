@@ -11,6 +11,8 @@ pub enum Token {
     Rangle2,
     Rangle2F,
     DoubleRangle2,
+
+    And,
 }
 
 impl Display for Token {
@@ -24,6 +26,7 @@ impl Display for Token {
             Token::Rangle2 => write!(f, "2>"),
             Token::Rangle2F => write!(f, "2>|"),
             Token::DoubleRangle2 => write!(f, "2>>"),
+            Token::And => write!(f, "&"),
         }
     }
 }

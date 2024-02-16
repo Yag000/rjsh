@@ -103,6 +103,7 @@ impl Lexer {
         self.skip_whitespace();
         let ch = self.ch?;
         let tok = match ch {
+            '&' => Token::And,
             '<' => Token::Langle,
             '>' => self.match_rangle(),
             '2' => self.match_rangle2(),
@@ -174,6 +175,14 @@ mod tests {
         assert_eq!(lexer.next_token(), Some(Token::Rangle2F));
         assert_eq!(lexer.next_token(), Some(Token::DoubleRangle));
         assert_eq!(lexer.next_token(), Some(Token::DoubleRangle2));
+        assert_eq!(lexer.next_token(), None);
+    }
+
+    #[test]
+    fn test_background_token() {
+        let mut lexer = Lexer::new("a & ".to_string());
+        assert_eq!(lexer.next_token(), Some(Token::String(String::from("a"))));
+        assert_eq!(lexer.next_token(), Some(Token::And));
         assert_eq!(lexer.next_token(), None);
     }
 }
