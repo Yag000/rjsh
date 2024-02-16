@@ -55,22 +55,22 @@ impl Lexer {
 
     pub fn read_string(&mut self) -> String {
         let position = self.position;
-        while let Some(ch) = self.ch {
-            if ch.is_whitespace() {
+        while let Some(ch) = self.peek_char() {
+            if ch.is_whitespace() || ch == '&' {
                 break;
             }
             self.read_char();
         }
-        self.input[position..self.position].iter().collect()
+        self.input[position..self.position + 1].iter().collect()
     }
 
     fn match_rangle(&mut self) -> Token {
         match self.peek_char() {
-            '|' => {
+            Some('|') => {
                 self.read_char();
                 Token::RangleF
             }
-            '>' => {
+            Some('>') => {
                 self.read_char();
                 Token::DoubleRangle
             }
@@ -80,14 +80,14 @@ impl Lexer {
 
     fn match_rangle2(&mut self) -> Token {
         match self.peek_char() {
-            '>' => {
+            Some('>') => {
                 self.read_char();
                 match self.peek_char() {
-                    '|' => {
+                    Some('|') => {
                         self.read_char();
                         Token::Rangle2F
                     }
-                    '>' => {
+                    Some('>') => {
                         self.read_char();
                         Token::DoubleRangle2
                     }
@@ -113,11 +113,11 @@ impl Lexer {
         Some(tok)
     }
 
-    fn peek_char(&self) -> char {
+    fn peek_char(&self) -> Option<char> {
         if self.read_position >= self.input.len() {
-            '\0'
+            None
         } else {
-            self.input[self.read_position]
+            Some(self.input[self.read_position])
         }
     }
 }
@@ -181,6 +181,10 @@ mod tests {
     #[test]
     fn test_background_token() {
         let mut lexer = Lexer::new("a & ".to_string());
+        assert_eq!(lexer.next_token(), Some(Token::String(String::from("a"))));
+        assert_eq!(lexer.next_token(), Some(Token::And));
+        assert_eq!(lexer.next_token(), None);
+        let mut lexer = Lexer::new("a& ".to_string());
         assert_eq!(lexer.next_token(), Some(Token::String(String::from("a"))));
         assert_eq!(lexer.next_token(), Some(Token::And));
         assert_eq!(lexer.next_token(), None);

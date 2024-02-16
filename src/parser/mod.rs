@@ -87,6 +87,7 @@ impl Parser {
 
         let mut args = vec![];
         let mut redirections = vec![];
+        let mut background = false;
 
         while let Some(tok) = self.current_token.clone() {
             match tok {
@@ -98,12 +99,16 @@ impl Parser {
                 | Token::Rangle2F
                 | Token::DoubleRangle
                 | Token::DoubleRangle2 => redirections.push(self.parse_redirection()?),
+                Token::And => {
+                    background = true;
+                    break;
+                }
                 _ => break,
             }
             self.read_token();
         }
 
-        Ok(Command::new(name, args, redirections))
+        Ok(Command::new(name, args, redirections, background))
     }
 }
 
@@ -183,6 +188,7 @@ mod tests {
                     type_,
                     permissions,
                 )],
+                false,
             ),
         );
     }
@@ -260,6 +266,56 @@ mod tests {
         ];
 
         let input = "a < b 2>| c >> d".to_string();
-        assert_command(input, Command::new("a".into(), Vec::new(), redirections));
+        assert_command(
+            input,
+            Command::new("a".into(), Vec::new(), redirections, false),
+        );
+    }
+
+    fn assert_background_comamnd(input: String, expected_name: String, expected_args: Vec<String>) {
+        let command = Parser::new(input).parse_command();
+        assert!(!command.is_err());
+        let command = command.unwrap();
+        assert_eq!(
+            command,
+            Command {
+                name: expected_name,
+                args: expected_args,
+                redirections: Vec::new(),
+                background: true,
+            }
+        )
+    }
+
+    #[test]
+    fn test_backgroudn_command_one_identifier() {
+        assert_background_comamnd("a&".to_string(), "a".to_string(), Vec::new());
+        assert_background_comamnd("  ab  & ".to_string(), "ab".to_string(), Vec::new());
+        assert_background_comamnd("abc &  ".to_string(), "abc".to_string(), Vec::new());
+        assert_background_comamnd("   a  &".to_string(), "a".to_string(), Vec::new());
+    }
+
+    #[test]
+    fn test_background_multiple_identifiers() {
+        assert_background_comamnd(
+            "a b c&".to_string(),
+            "a".to_string(),
+            vec!["b".to_string(), "c".to_string()],
+        );
+        assert_background_comamnd(
+            "a b c    &".to_string(),
+            "a".to_string(),
+            vec!["b".to_string(), "c".to_string()],
+        );
+        assert_background_comamnd(
+            "a b c&  ".to_string(),
+            "a".to_string(),
+            vec!["b".to_string(), "c".to_string()],
+        );
+        assert_background_comamnd(
+            "a b   c   &  ".to_string(),
+            "a".to_string(),
+            vec!["b".to_string(), "c".to_string()],
+        );
     }
 }

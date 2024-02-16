@@ -97,12 +97,17 @@ impl Display for Command {
 }
 
 impl Command {
-    pub fn new(name: String, args: Vec<String>, redirections: Vec<Redirection>) -> Command {
+    pub fn new(
+        name: String,
+        args: Vec<String>,
+        redirections: Vec<Redirection>,
+        background: bool,
+    ) -> Command {
         Command {
             name,
             args,
             redirections,
-            background: false,
+            background,
         }
     }
 }
