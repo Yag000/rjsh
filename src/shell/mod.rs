@@ -122,7 +122,7 @@ impl Shell for DefaultShell {
 
     fn update_jobs(&mut self) {
         if let Err(e) = self.job_table.update() {
-            eprint!("rjsh: {e}");
+            eprintln!("rjsh: {e}");
         }
     }
 

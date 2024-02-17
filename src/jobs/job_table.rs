@@ -28,7 +28,7 @@ impl JobTable {
 
     pub fn remove_job(&mut self, id: usize) -> Result<(), anyhow::Error> {
         if id > self.table.len() && self.size != 0 {
-            Err(anyhow!("rjsh: Job index out of bounds"))
+            Err(anyhow!("Job index out of bounds"))
         } else {
             self.table[id - 1] = None;
             self.size -= 1;
