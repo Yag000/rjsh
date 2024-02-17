@@ -41,12 +41,10 @@ impl JobTable {
 
     pub fn update(&mut self) -> Result<(), anyhow::Error> {
         let mut to_remove = Vec::new();
-        for job in &mut self.table {
-            if let Some(job) = job {
-                job.update(false)?;
-                if job.last_status.is_finished() {
-                    to_remove.push(job.id)
-                }
+        for job in self.table.iter_mut().flatten() {
+            job.update(false)?;
+            if job.last_status.is_finished() {
+                to_remove.push(job.id)
             }
         }
 
@@ -58,10 +56,8 @@ impl JobTable {
     }
 
     pub fn print_jobs(&self) {
-        for job in &self.table {
-            if let Some(job) = job {
-                println!("{job}");
-            }
+        for job in self.table.iter().flatten() {
+            println!("{job}");
         }
     }
 }

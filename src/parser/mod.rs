@@ -136,7 +136,7 @@ mod tests {
 
     fn assert_simple_comamnd(input: String, expected_name: String, expected_args: Vec<String>) {
         let command = Parser::new(input).parse_command();
-        assert!(!command.is_err());
+        assert!(command.is_ok());
         let command = command.unwrap();
         assert_eq!(
             command,
@@ -168,7 +168,7 @@ mod tests {
 
     fn assert_command(input: String, expected: Command) {
         let command = Parser::new(input).parse_command();
-        assert!(!command.is_err());
+        assert!(command.is_ok());
         let command = command.unwrap();
         assert_eq!(command, expected);
     }
@@ -274,7 +274,7 @@ mod tests {
 
     fn assert_background_comamnd(input: String, expected_name: String, expected_args: Vec<String>) {
         let command = Parser::new(input).parse_command();
-        assert!(!command.is_err());
+        assert!(command.is_ok());
         let command = command.unwrap();
         assert_eq!(
             command,
