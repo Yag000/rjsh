@@ -89,6 +89,7 @@ pub struct Command {
 
 impl Display for Command {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ", self.name)?;
         for arg in &self.args {
             write!(f, "{} ", arg)?;
         }

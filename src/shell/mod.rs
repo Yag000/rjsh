@@ -1,11 +1,12 @@
 use std::{
     fs::OpenOptions,
-    os::unix::{io::FromRawFd, process::ExitStatusExt},
-    process::{Command, ExitStatus, Stdio},
+    os::unix::io::FromRawFd,
+    process::{Command, Stdio},
 };
 
 use crate::{
     error::UnwrapPrintError,
+    jobs::{external_process::ExternalProcesss, job_table::JobTable, Job, Pgid, Process, Status},
     parser::ast::{Redirectee, Redirection, RedirectionPermission, RedirectionType},
 };
 
@@ -17,12 +18,18 @@ pub trait Shell {
     fn exit(&mut self);
 
     fn should_exit(&self) -> bool;
+
+    fn job_number(&self) -> usize;
+
+    fn update_jobs(&mut self);
 }
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 pub struct DefaultShell {
     last_exit_code: i32,
     should_exit: bool,
+
+    job_table: JobTable,
 }
 
 fn redirection_to_raw_fd(redirection: &Redirection) -> Stdio {
@@ -65,21 +72,30 @@ impl Shell for DefaultShell {
             None => {
                 let mut cmd = ast_to_command(command);
                 //TODO: Handle NONE if it was stopped/killed by a signal
-                let exit = match cmd.status() {
-                    Ok(status) => status,
-                    Err(err) => {
-                        eprintln!("rjsh: {}", err);
-                        ExitStatus::from_raw(1)
-                    }
-                };
+                let child = cmd.spawn()?;
+                let mut process = ExternalProcesss::new(child, command.to_string());
+
+                let exit = process.wait(!command.background)?;
                 //TODO: Handle NONE if it was stopped/killed by a signal
-                self.last_exit_code = match exit.code() {
-                    Some(code) => code,
-                    None => {
-                        eprintln!("rjsh: terminated by signal");
-                        1
+                match exit {
+                    Status::Done | Status::Killed => {
+                        let exit_code = process
+                            .exit_status()
+                            .expect("rjsh: wow, that should not happen");
+                        self.last_exit_code = exit_code
+                            .code()
+                            .expect("rjsh: wow, that should not happen again");
                     }
-                };
+                    status => {
+                        let job = Job::new(
+                            Pgid(-(i32::try_from(process.pid().0)?)),
+                            vec![Box::new(process)],
+                            status,
+                            command.to_string(),
+                        );
+                        self.job_table.add_job(job);
+                    }
+                }
             }
         }
         std::env::set_var("?", self.last_exit_code.to_string());
@@ -96,5 +112,15 @@ impl Shell for DefaultShell {
 
     fn should_exit(&self) -> bool {
         self.should_exit
+    }
+
+    fn job_number(&self) -> usize {
+        self.job_table.size()
+    }
+
+    fn update_jobs(&mut self) {
+        if let Err(e) = self.job_table.update() {
+            eprint!("rjsh: {e}");
+        }
     }
 }

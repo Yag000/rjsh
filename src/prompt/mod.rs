@@ -19,6 +19,14 @@ pub fn get_prompt(shell: &dyn Shell) -> anyhow::Result<String> {
         0 => "$ ".green(),
         _ => "$ ".red(),
     };
+
     let prompt = format!("{} {}", new_cwd.blue(), invite);
-    Ok(prompt)
+
+    let jobs = shell.job_number();
+    if jobs > 0 {
+        let jobs = format!("[{jobs}]").cyan();
+        Ok(format!("{jobs} {prompt}"))
+    } else {
+        Ok(prompt)
+    }
 }
