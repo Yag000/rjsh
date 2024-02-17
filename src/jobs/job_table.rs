@@ -21,7 +21,6 @@ impl JobTable {
                     break;
                 }
             }
-            unreachable!()
         }
         self.size += 1;
     }
