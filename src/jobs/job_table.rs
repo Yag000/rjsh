@@ -57,4 +57,12 @@ impl JobTable {
 
         Ok(())
     }
+
+    pub fn print_jobs(&self) {
+        for job in &self.table {
+            if let Some(job) = job {
+                println!("{job}");
+            }
+        }
+    }
 }

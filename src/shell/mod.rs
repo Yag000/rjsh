@@ -22,6 +22,8 @@ pub trait Shell {
     fn job_number(&self) -> usize;
 
     fn update_jobs(&mut self);
+
+    fn print_jobs(&self);
 }
 
 #[derive(Default)]
@@ -88,7 +90,7 @@ impl Shell for DefaultShell {
                     }
                     status => {
                         let job = Job::new(
-                            Pgid(-(i32::try_from(process.pid().0)?)),
+                            Pgid(i32::try_from(process.pid().0)?),
                             vec![Box::new(process)],
                             status,
                             command.to_string(),
@@ -122,5 +124,9 @@ impl Shell for DefaultShell {
         if let Err(e) = self.job_table.update() {
             eprint!("rjsh: {e}");
         }
+    }
+
+    fn print_jobs(&self) {
+        self.job_table.print_jobs();
     }
 }
