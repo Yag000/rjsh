@@ -1,4 +1,5 @@
 use rjsh::editor::RjshEditor;
+use rjsh::exec::execute_command;
 use rjsh::parser::Parser;
 use rjsh::prompt::get_prompt;
 use rjsh::shell::Shell;
@@ -29,7 +30,7 @@ fn main() -> anyhow::Result<()> {
                         if !command.name.is_empty() {
                             // TODO: Do not add a successful exit to the history
                             rl.add_history_entry(line)?;
-                            shell.execute_command(&command)?;
+                            execute_command(&mut shell, &command)?;
                         }
                     }
                     Err(e) => eprintln!("{e}"),
