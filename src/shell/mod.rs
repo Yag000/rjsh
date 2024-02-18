@@ -24,6 +24,8 @@ pub trait Shell {
     fn update_jobs(&mut self);
 
     fn print_jobs(&self);
+
+    fn get_job_pid(&self, job_id: usize) -> anyhow::Result<i32>;
 }
 
 #[derive(Default)]
@@ -128,5 +130,14 @@ impl Shell for DefaultShell {
 
     fn print_jobs(&self) {
         self.job_table.print_jobs();
+    }
+
+    fn get_job_pid(&self, job_id: usize) -> anyhow::Result<i32> {
+        Ok(self
+            .job_table
+            .get_job(job_id)
+            .ok_or_else(|| anyhow::anyhow!("Job not found"))?
+            .pgid
+            .0)
     }
 }

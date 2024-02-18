@@ -60,4 +60,8 @@ impl JobTable {
             println!("{job}");
         }
     }
+
+    pub fn get_job(&self, id: usize) -> Option<&Job> {
+        self.table.get(id - 1)?.as_ref()
+    }
 }

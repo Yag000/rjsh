@@ -16,6 +16,7 @@ anyhow = "1.0.79"
 colored = "2.1.0"
 enum_stringify = "0.3.0"
 home = "0.5.9"
+nix = { version = "0.27.1", features = ["signal"] }
 rustyline = { version = "13.0.0", features = ["with-dirs", "with-file-history"] }
 
 

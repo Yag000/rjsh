@@ -178,6 +178,7 @@ dependencies = [
  "colored",
  "enum_stringify",
  "home",
+ "nix",
  "rustyline",
 ]
 
