@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::{Process, Status};
+use super::{ExitStatus, Process, Status};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Pgid(pub i32);
@@ -8,6 +8,8 @@ pub struct Pgid(pub i32);
 pub struct Job {
     pub id: usize,
     pub pgid: Pgid,
+    leader: usize,
+    pub background: bool,
     pub last_status: Status,
     pub name: String,
     pub processes: Vec<Box<dyn Process>>,
@@ -28,13 +30,19 @@ impl Job {
         pgid: Pgid,
         processes: Vec<Box<dyn Process>>,
         last_status: Status,
+        background: bool,
         name: String,
     ) -> Job {
         Job {
             id: 0,
+            // Find a better way of dealing with this.
+            // Maybe leader should be on the processes itself ?
+            // Or an argument of this function, which is already quite big...
+            leader: 0,
             pgid,
             processes,
             last_status,
+            background,
             name,
         }
     }
@@ -63,9 +71,16 @@ impl Job {
         }
 
         if last_status != self.last_status {
-            println!("{self}");
+            // We should not print an update on a foreground job that is finished
+            if self.background || !self.last_status.is_finished() {
+                println!("{self}");
+            }
         }
 
         Ok(())
+    }
+
+    pub fn exit_status(&self) -> Option<ExitStatus> {
+        self.processes[self.leader].exit_status()
     }
 }

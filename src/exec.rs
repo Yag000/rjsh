@@ -31,7 +31,7 @@ fn redirection_to_raw_fd(redirection: &Redirection) -> Stdio {
     }
 }
 
-fn ast_to_command(ast: &crate::parser::ast::Command) -> Command {
+fn ast_to_job(ast: &crate::parser::ast::Command) -> anyhow::Result<Job> {
     let mut cmd = Command::new(&ast.name);
     cmd.args(&ast.args);
     ast.redirections.iter().fold(&mut cmd, |acc, r| {
@@ -42,7 +42,17 @@ fn ast_to_command(ast: &crate::parser::ast::Command) -> Command {
             RedirectionType::Stderr => acc.stderr(file),
         }
     });
-    cmd
+
+    let child = cmd.spawn()?;
+    let process = ExternalProcesss::new(child, ast.to_string());
+
+    Ok(Job::new(
+        Pgid(i32::try_from(process.pid().0)?),
+        vec![Box::new(process)],
+        Status::Running,
+        ast.background,
+        ast.to_string(),
+    ))
 }
 
 pub fn execute_command(
@@ -55,29 +65,20 @@ pub fn execute_command(
             exit_code = Some(builtin.call(shell, &command.args).unwrap_error_with_print());
         }
         None => {
-            let mut cmd = ast_to_command(command);
-            let child = cmd.spawn()?;
-            let mut process = ExternalProcesss::new(child, command.to_string());
+            let mut job = ast_to_job(command)?;
 
-            let exit = process.wait(!command.background)?;
+            job.update(!command.background)?;
             //TODO: Handle NONE if it was stopped/killed by a signal
-            match exit {
+            match job.last_status {
                 Status::Done | Status::Killed => {
                     exit_code = Some(
-                        process
-                            .exit_status()
+                        job.exit_status()
                             .expect("rjsh: wow, that should not happen")
                             .code()
                             .expect("rjsh: wow, that should not happen again"),
                     );
                 }
-                status => {
-                    let job = Job::new(
-                        Pgid(i32::try_from(process.pid().0)?),
-                        vec![Box::new(process)],
-                        status,
-                        command.to_string(),
-                    );
+                Status::Running | Status::Stopped => {
                     shell.add_job(job);
                 }
             }
