@@ -1,8 +1,9 @@
-use std::{fmt::Display, process::ExitStatus, usize};
+use std::{os::unix::process::ExitStatusExt, process::Child};
 
+use anyhow::anyhow;
 use enum_stringify::EnumStringify;
 
-pub mod external_process;
+pub mod job;
 pub mod job_table;
 
 #[derive(Debug, Clone, Copy)]
@@ -25,6 +26,92 @@ impl Status {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct ExitStatus {
+    exit_status: ExitStatusEnum,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum ExitStatusEnum {
+    Done(i32),
+    Killed(KilledInfo),
+    Stopped(i32),
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+struct KilledInfo {
+    exit_code: i32,
+    signal: i32,
+}
+
+impl ExitStatus {
+    pub fn code(&self) -> Option<i32> {
+        match &self.exit_status {
+            ExitStatusEnum::Done(code) => Some(*code),
+            ExitStatusEnum::Killed(info) => Some(info.exit_code),
+            ExitStatusEnum::Stopped(_) => None,
+        }
+    }
+
+    pub fn killed(&self) -> Option<i32> {
+        match &self.exit_status {
+            ExitStatusEnum::Done(_) => None,
+            ExitStatusEnum::Killed(info) => Some(info.signal),
+            ExitStatusEnum::Stopped(_) => None,
+        }
+    }
+
+    pub fn stopped_signal(&self) -> Option<i32> {
+        match &self.exit_status {
+            ExitStatusEnum::Done(_) => None,
+            ExitStatusEnum::Killed(_) => None,
+            ExitStatusEnum::Stopped(code) => Some(*code),
+        }
+    }
+}
+impl TryFrom<std::process::ExitStatus> for ExitStatus {
+    type Error = anyhow::Error;
+
+    fn try_from(value: std::process::ExitStatus) -> Result<Self, Self::Error> {
+        if value.success() {
+            Ok(ExitStatus {
+                exit_status: ExitStatusEnum::Done(value.code().ok_or(anyhow!("No exit code"))?),
+            })
+        } else if let Some(signal) = value.signal() {
+            if let Some(code) = value.code() {
+                Ok(ExitStatus {
+                    exit_status: ExitStatusEnum::Killed(KilledInfo {
+                        exit_code: code,
+                        signal,
+                    }),
+                })
+            } else {
+                Err(anyhow!("No exit code"))
+            }
+        } else if let Some(code) = value.stopped_signal() {
+            Ok(ExitStatus {
+                exit_status: ExitStatusEnum::Stopped(code),
+            })
+        } else {
+            Err(anyhow!("Unknown state"))
+        }
+    }
+}
+impl From<Option<ExitStatus>> for Status {
+    fn from(value: Option<ExitStatus>) -> Self {
+        match value {
+            Some(status) => {
+                if status.stopped_signal().is_some() {
+                    Status::Stopped
+                } else {
+                    Status::Done
+                }
+            }
+            None => Status::Running,
+        }
+    }
+}
+
 pub trait Process {
     fn pid(&self) -> ProcessId;
     fn name(&self) -> String;
@@ -33,70 +120,55 @@ pub trait Process {
     fn wait(&mut self, blocking: bool) -> Result<Status, anyhow::Error>;
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Pgid(pub i32);
+#[derive(Debug)]
+pub struct ExternalProcesss {
+    name: String,
+    pid: ProcessId,
+    status: Status,
+    exit_status: Option<ExitStatus>,
 
-pub struct Job {
-    pub id: usize,
-    pub pgid: Pgid,
-    pub last_status: Status,
-    pub name: String,
-    pub processes: Vec<Box<dyn Process>>,
+    child: Child,
 }
 
-impl Display for Job {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "[{}]\t{}\t{}\t{}",
-            self.id, self.pgid.0, self.last_status, self.name
-        )
-    }
-}
-
-impl Job {
-    pub fn new(
-        pgid: Pgid,
-        processes: Vec<Box<dyn Process>>,
-        last_status: Status,
-        name: String,
-    ) -> Job {
-        Job {
-            id: 0,
-            pgid,
-            processes,
-            last_status,
-            name,
-        }
+impl Process for ExternalProcesss {
+    fn pid(&self) -> ProcessId {
+        self.pid
     }
 
-    pub fn update(&mut self, blocking: bool) -> Result<(), anyhow::Error> {
-        for process in &mut self.processes {
-            if process.status().is_finished() {
-                continue;
-            }
-            process.wait(blocking)?;
-        }
+    fn name(&self) -> String {
+        self.name.clone()
+    }
 
-        let last_status = self.last_status;
+    fn status(&self) -> Status {
+        self.status
+    }
 
-        if self.processes.iter().any(|p| p.status() == Status::Running) {
-            self.last_status = Status::Running;
-        } else if self.processes.iter().any(|p| p.status() == Status::Stopped) {
-            self.last_status = Status::Stopped;
+    fn exit_status(&self) -> Option<ExitStatus> {
+        self.exit_status
+    }
+
+    fn wait(&mut self, blocking: bool) -> Result<Status, anyhow::Error> {
+        let exit_status = if blocking {
+            Some(self.child.wait()?)
         } else {
-            //TODO: Handle detached
-            if self.processes.iter().any(|p| p.status() == Status::Killed) {
-                self.last_status = Status::Killed;
-            } else {
-                self.last_status = Status::Done;
-            }
-        }
+            self.child.try_wait()?
+        };
+        self.exit_status = exit_status.map(ExitStatus::try_from).transpose()?;
+        self.status = Status::from(self.exit_status);
+        Ok(self.status)
+    }
+}
 
-        if last_status != self.last_status {
-            println!("{self}");
+impl ExternalProcesss {
+    pub fn new(child: Child, name: String) -> Self {
+        let pid = ProcessId(child.id());
+        let status = Status::Running;
+        ExternalProcesss {
+            name,
+            child,
+            pid,
+            status,
+            exit_status: None,
         }
-
-        Ok(())
     }
 }

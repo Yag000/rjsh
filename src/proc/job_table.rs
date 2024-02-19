@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 
-use super::Job;
+use super::job::Job;
 
 #[derive(Default)]
 pub struct JobTable {

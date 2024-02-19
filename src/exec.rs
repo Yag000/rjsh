@@ -7,7 +7,10 @@ use std::{
 use crate::{
     error::UnwrapPrintError,
     parser::ast::{Redirectee, Redirection, RedirectionPermission, RedirectionType},
-    proc::{external_process::ExternalProcesss, Job, Pgid, Process, Status},
+    proc::{
+        job::{Job, Pgid},
+        ExternalProcesss, Process, Status,
+    },
     shell::Shell,
 };
 
