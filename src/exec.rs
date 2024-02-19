@@ -1,6 +1,6 @@
 use std::{
     fs::OpenOptions,
-    os::fd::FromRawFd,
+    os::fd::{FromRawFd, IntoRawFd, RawFd},
     process::{Command, Stdio},
 };
 
@@ -14,34 +14,62 @@ use crate::{
     shell::Shell,
 };
 
-fn redirection_to_raw_fd(redirection: &Redirection) -> Stdio {
-    match redirection.redirectee.clone() {
-        Redirectee::FileName(path) => {
-            let file = OpenOptions::new()
-                .create(redirection.type_ != RedirectionType::Stdin)
-                .write(redirection.type_ != RedirectionType::Stdin)
-                .read(redirection.type_ == RedirectionType::Stdin)
-                .truncate(redirection.permissions == RedirectionPermission::Truncate)
-                .append(redirection.permissions == RedirectionPermission::Append)
-                .open(path)
-                .unwrap();
-            Stdio::from(file)
+#[derive(Default)]
+struct RedirectionHolder {
+    stdin: Option<RawFd>,
+    stdout: Option<RawFd>,
+    stderr: Option<RawFd>,
+}
+
+impl RedirectionHolder {
+    fn update(&mut self, redirection: &Redirection) {
+        match redirection.type_ {
+            RedirectionType::Stdin => self.stdin = Some(Self::redirection_to_raw_fd(redirection)),
+            RedirectionType::Stdout => self.stdout = Some(Self::redirection_to_raw_fd(redirection)),
+            RedirectionType::Stderr => self.stderr = Some(Self::redirection_to_raw_fd(redirection)),
         }
-        Redirectee::FileDescriptor(fd) => unsafe { Stdio::from_raw_fd(fd) },
+    }
+
+    fn redirection_to_raw_fd(redirection: &Redirection) -> RawFd {
+        match redirection.redirectee.clone() {
+            Redirectee::FileName(path) => {
+                let file = OpenOptions::new()
+                    .create(redirection.type_ != RedirectionType::Stdin)
+                    .write(redirection.type_ != RedirectionType::Stdin)
+                    .read(redirection.type_ == RedirectionType::Stdin)
+                    .truncate(redirection.permissions == RedirectionPermission::Truncate)
+                    .append(redirection.permissions == RedirectionPermission::Append)
+                    .open(path)
+                    .unwrap();
+                file.into_raw_fd()
+            }
+            Redirectee::FileDescriptor(fd) => fd,
+        }
+    }
+
+    fn update_command(&self, cmd: &mut Command) {
+        if let Some(fd) = self.stdin {
+            cmd.stdin(unsafe { Stdio::from_raw_fd(fd) });
+        }
+        if let Some(fd) = self.stdout {
+            cmd.stdout(unsafe { Stdio::from_raw_fd(fd) });
+        }
+        if let Some(fd) = self.stderr {
+            cmd.stderr(unsafe { Stdio::from_raw_fd(fd) });
+        }
     }
 }
 
 fn ast_to_job(ast: &crate::parser::ast::Command) -> anyhow::Result<Job> {
     let mut cmd = Command::new(&ast.name);
     cmd.args(&ast.args);
-    ast.redirections.iter().fold(&mut cmd, |acc, r| {
-        let file = redirection_to_raw_fd(r);
-        match r.type_ {
-            RedirectionType::Stdin => acc.stdin(file),
-            RedirectionType::Stdout => acc.stdout(file),
-            RedirectionType::Stderr => acc.stderr(file),
-        }
+
+    let mut redirections = RedirectionHolder::default();
+    ast.redirections.iter().for_each(|r| {
+        redirections.update(r);
     });
+
+    redirections.update_command(&mut cmd);
 
     let child = cmd.spawn()?;
     let process = ExternalProcesss::new(child, ast.to_string());
