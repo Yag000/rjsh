@@ -6,8 +6,8 @@ use std::{
 
 use crate::{
     error::UnwrapPrintError,
-    jobs::{external_process::ExternalProcesss, Job, Pgid, Process, Status},
     parser::ast::{Redirectee, Redirection, RedirectionPermission, RedirectionType},
+    proc::{external_process::ExternalProcesss, Job, Pgid, Process, Status},
     shell::Shell,
 };
 

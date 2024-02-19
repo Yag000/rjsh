@@ -1,4 +1,4 @@
-use crate::jobs::{job_table::JobTable, Job};
+use crate::proc::{job_table::JobTable, Job};
 
 pub trait Shell {
     fn add_job(&mut self, job: Job);
