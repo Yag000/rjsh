@@ -73,9 +73,9 @@ impl TryFrom<std::process::ExitStatus> for ExitStatus {
     type Error = anyhow::Error;
 
     fn try_from(value: std::process::ExitStatus) -> Result<Self, Self::Error> {
-        if value.success() {
+        if let Some(code) = value.code() {
             Ok(ExitStatus {
-                exit_status: ExitStatusEnum::Done(value.code().ok_or(anyhow!("No exit code"))?),
+                exit_status: ExitStatusEnum::Done(code),
             })
         } else if let Some(signal) = value.signal() {
             if let Some(code) = value.code() {
