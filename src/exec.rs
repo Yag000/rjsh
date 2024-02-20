@@ -9,7 +9,7 @@ use crate::{
     parser::ast::{Redirectee, Redirection, RedirectionPermission, RedirectionType},
     proc::{
         job::{Job, Pgid},
-        ExternalProcesss, Process, Status,
+        ExternalProcesss, ProcessId, Status,
     },
     shell::Shell,
 };
@@ -71,11 +71,11 @@ fn ast_to_job(ast: &crate::parser::ast::Command) -> anyhow::Result<Job> {
 
     redirections.update_command(&mut cmd);
 
-    let child = cmd.spawn()?;
-    let process = ExternalProcesss::new(child, ast.to_string());
+    let child_pid = ProcessId(cmd.spawn()?.id() as i32);
+    let process = ExternalProcesss::new(child_pid, ast.to_string());
 
     Ok(Job::new(
-        Pgid(i32::try_from(process.pid().0)?),
+        Pgid(child_pid.0),
         vec![Box::new(process)],
         Status::Running,
         ast.background,

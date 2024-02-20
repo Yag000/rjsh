@@ -47,16 +47,7 @@ impl Job {
         }
     }
 
-    pub fn update(&mut self, blocking: bool) -> Result<(), anyhow::Error> {
-        for process in &mut self.processes {
-            if process.status().is_finished() {
-                continue;
-            }
-            process.wait(blocking)?;
-        }
-
-        let last_status = self.last_status;
-
+    fn update_status(&mut self) {
         if self.processes.iter().any(|p| p.status() == Status::Running) {
             self.last_status = Status::Running;
         } else if self.processes.iter().any(|p| p.status() == Status::Stopped) {
@@ -69,6 +60,19 @@ impl Job {
                 self.last_status = Status::Done;
             }
         }
+    }
+
+    pub fn update(&mut self, blocking: bool) -> Result<(), anyhow::Error> {
+        for process in &mut self.processes {
+            if process.status().is_finished() {
+                continue;
+            }
+            process.wait(blocking)?;
+        }
+
+        let last_status = self.last_status;
+
+        self.update_status();
 
         if last_status != self.last_status {
             // We should not print an update on a foreground job that is finished
