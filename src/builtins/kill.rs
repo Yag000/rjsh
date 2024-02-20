@@ -18,7 +18,7 @@ impl BuiltIn for Kill {
         }
 
         let signal = if args.len() == 2 {
-            Signal::from_str(&args[0][1..])?
+            Signal::try_from(i32::from_str(&args[0][1..])?)?
         } else {
             SIGTERM
         };
