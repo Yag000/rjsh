@@ -36,6 +36,12 @@ enum ExitStatusEnum {
     Stopped(i32),
 }
 
+impl From<ExitStatusEnum> for ExitStatus {
+    fn from(exit_status: ExitStatusEnum) -> Self {
+        ExitStatus { exit_status }
+    }
+}
+
 impl ExitStatus {
     pub fn code(&self) -> Option<i32> {
         match &self.exit_status {
@@ -60,23 +66,6 @@ impl ExitStatus {
             ExitStatusEnum::Stopped(code) => Some(*code),
         }
     }
-
-    pub fn from_wait_status(status: WaitStatus) -> Option<Self> {
-        match status {
-            WaitStatus::Exited(_, code) => Some(ExitStatus {
-                exit_status: ExitStatusEnum::Done(code),
-            }),
-            WaitStatus::Signaled(_, sig, _) => Some(ExitStatus {
-                exit_status: ExitStatusEnum::Killed(sig as i32),
-            }),
-            WaitStatus::Stopped(_, sig) | WaitStatus::PtraceEvent(_, sig, _) => Some(ExitStatus {
-                exit_status: ExitStatusEnum::Stopped(sig as i32),
-            }),
-            WaitStatus::PtraceSyscall(_) | WaitStatus::Continued(_) | WaitStatus::StillAlive => {
-                None
-            }
-        }
-    }
 }
 
 impl From<Option<ExitStatus>> for Status {
@@ -97,6 +86,40 @@ impl From<Option<ExitStatus>> for Status {
 }
 
 #[derive(Debug, Clone, Copy)]
+struct ProcessStatus {
+    status: Status,
+    exit_status: Option<ExitStatus>,
+}
+
+impl Default for ProcessStatus {
+    fn default() -> Self {
+        ProcessStatus {
+            status: Status::Running,
+            exit_status: None,
+        }
+    }
+}
+
+impl ProcessStatus {
+    pub fn update(&mut self, status: WaitStatus) {
+        match status {
+            WaitStatus::Exited(_, code) => {
+                self.exit_status = Some(ExitStatusEnum::Done(code).into())
+            }
+            WaitStatus::Signaled(_, sig, _) => {
+                self.exit_status = Some(ExitStatusEnum::Killed(sig as i32).into())
+            }
+            WaitStatus::Stopped(_, sig) | WaitStatus::PtraceEvent(_, sig, _) => {
+                self.exit_status = Some(ExitStatusEnum::Stopped(sig as i32).into())
+            }
+            WaitStatus::PtraceSyscall(_) | WaitStatus::Continued(_) => self.exit_status = None,
+            WaitStatus::StillAlive => {}
+        };
+        self.status = Status::from(self.exit_status);
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct ProcessId(pub i32);
 
 pub trait Process {
@@ -111,8 +134,7 @@ pub trait Process {
 pub struct ExternalProcesss {
     name: String,
     pid: ProcessId,
-    status: Status,
-    exit_status: Option<ExitStatus>,
+    status: ProcessStatus,
 }
 
 impl Process for ExternalProcesss {
@@ -125,11 +147,11 @@ impl Process for ExternalProcesss {
     }
 
     fn status(&self) -> Status {
-        self.status
+        self.status.status
     }
 
     fn exit_status(&self) -> Option<ExitStatus> {
-        self.exit_status
+        self.status.exit_status
     }
 
     fn wait(&mut self, blocking: bool) -> Result<Status, anyhow::Error> {
@@ -142,20 +164,14 @@ impl Process for ExternalProcesss {
         };
         let wait_res = waitpid(Pid::from_raw(self.pid.0), Some(flags))?;
 
-        self.exit_status = ExitStatus::from_wait_status(wait_res);
-        self.status = Status::from(self.exit_status);
-        Ok(self.status)
+        self.status.update(wait_res);
+        Ok(self.status.status)
     }
 }
 
 impl ExternalProcesss {
     pub fn new(pid: ProcessId, name: String) -> Self {
-        let status = Status::Running;
-        ExternalProcesss {
-            name,
-            pid,
-            status,
-            exit_status: None,
-        }
+        let status = ProcessStatus::default();
+        ExternalProcesss { name, pid, status }
     }
 }
