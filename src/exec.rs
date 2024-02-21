@@ -5,7 +5,7 @@ use std::{
     process::exit,
 };
 
-use nix::unistd::{dup2, execvp, fork, ForkResult};
+use nix::unistd::{dup2, execvp, fork, getpid, setpgid, ForkResult, Pid};
 
 use crate::{
     error::UnwrapPrintError,
@@ -64,13 +64,7 @@ impl RedirectionHolder {
     }
 }
 
-fn fork_execute(ast: crate::parser::ast::Command) -> anyhow::Result<ProcessId> {
-    let fork_result = unsafe { fork()? };
-
-    if let ForkResult::Parent { child } = fork_result {
-        return Ok(ProcessId(child.as_raw()));
-    }
-
+fn prepare_child(ast: &crate::parser::ast::Command, pgid: Pgid) {
     let mut redirections = RedirectionHolder::default();
     ast.redirections.iter().for_each(|r| {
         redirections.update(r);
@@ -80,6 +74,21 @@ fn fork_execute(ast: crate::parser::ast::Command) -> anyhow::Result<ProcessId> {
         eprintln!("rjsh: {e}");
         exit(1);
     }
+
+    if let Err(e) = setpgid(getpid(), Pid::from_raw(pgid.0)) {
+        eprintln!("rjsh: {e}");
+        exit(1);
+    }
+}
+
+fn fork_execute(ast: crate::parser::ast::Command) -> anyhow::Result<ProcessId> {
+    let fork_result = unsafe { fork()? };
+
+    if let ForkResult::Parent { child } = fork_result {
+        return Ok(ProcessId(child.as_raw()));
+    }
+
+    prepare_child(&ast, Pgid(0));
 
     // Don't forget to add the command name to the args
     let mut args = vec![ast.name.clone()];

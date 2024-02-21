@@ -15,7 +15,7 @@ pub trait Shell {
 
     fn print_jobs(&self);
 
-    fn get_job_pid(&self, job_id: usize) -> anyhow::Result<i32>;
+    fn get_job_pgid(&self, job_id: usize) -> anyhow::Result<i32>;
 }
 
 #[derive(Default)]
@@ -57,7 +57,7 @@ impl Shell for DefaultShell {
         self.job_table.print_jobs();
     }
 
-    fn get_job_pid(&self, job_id: usize) -> anyhow::Result<i32> {
+    fn get_job_pgid(&self, job_id: usize) -> anyhow::Result<i32> {
         Ok(self
             .job_table
             .get_job(job_id)

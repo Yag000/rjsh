@@ -31,9 +31,8 @@ impl BuiltIn for Kill {
 
         if let Some(stripped) = pid_s.strip_prefix('%') {
             let job_id = stripped.parse::<usize>()?;
-            let pgid = shell.get_job_pid(job_id)?;
-            // TODO: Chang this to killpg when eaxh jobs has it's own process group
-            nix::sys::signal::kill(nix::unistd::Pid::from_raw(pgid), signal)?;
+            let pgid = shell.get_job_pgid(job_id)?;
+            nix::sys::signal::killpg(nix::unistd::Pid::from_raw(pgid), signal)?;
         } else {
             let pid = pid_s.parse::<i32>()?;
             nix::sys::signal::kill(nix::unistd::Pid::from_raw(pid), signal)?;
