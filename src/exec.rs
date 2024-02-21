@@ -1,8 +1,11 @@
 use std::{
+    ffi::CString,
     fs::OpenOptions,
-    os::fd::{FromRawFd, IntoRawFd, RawFd},
-    process::{Command, Stdio},
+    os::fd::{IntoRawFd, RawFd},
+    process::exit,
 };
+
+use nix::unistd::{dup2, execvp, fork, ForkResult};
 
 use crate::{
     error::UnwrapPrintError,
@@ -47,55 +50,87 @@ impl RedirectionHolder {
         }
     }
 
-    fn update_command(&self, cmd: &mut Command) {
+    fn dup_redirections(self) -> anyhow::Result<()> {
         if let Some(fd) = self.stdin {
-            cmd.stdin(unsafe { Stdio::from_raw_fd(fd) });
+            dup2(0, fd)?;
         }
         if let Some(fd) = self.stdout {
-            cmd.stdout(unsafe { Stdio::from_raw_fd(fd) });
+            dup2(1, fd)?;
         }
         if let Some(fd) = self.stderr {
-            cmd.stderr(unsafe { Stdio::from_raw_fd(fd) });
+            dup2(2, fd)?;
         }
+        Ok(())
     }
 }
 
-fn ast_to_job(ast: &crate::parser::ast::Command) -> anyhow::Result<Job> {
-    let mut cmd = Command::new(&ast.name);
-    cmd.args(&ast.args);
+fn fork_execute(ast: crate::parser::ast::Command) -> anyhow::Result<ProcessId> {
+    let fork_result = unsafe { fork()? };
+
+    if let ForkResult::Parent { child } = fork_result {
+        return Ok(ProcessId(child.as_raw()));
+    }
 
     let mut redirections = RedirectionHolder::default();
     ast.redirections.iter().for_each(|r| {
         redirections.update(r);
     });
 
-    redirections.update_command(&mut cmd);
+    if let Err(e) = redirections.dup_redirections() {
+        eprintln!("rjsh: {e}");
+        exit(1);
+    }
 
-    let child_pid = ProcessId(cmd.spawn()?.id() as i32);
-    let process = ExternalProcesss::new(child_pid, ast.to_string());
+    // Don't forget to add the command name to the args
+    let mut args = vec![ast.name.clone()];
+    args.extend(ast.args);
+
+    let c_args: Vec<CString> = args
+        .iter()
+        .map(|arg| CString::new(arg.clone()).unwrap())
+        .collect();
+
+    let c_name = CString::new(ast.name).unwrap();
+
+    let res = execvp(c_name.as_ref(), c_args.as_ref());
+
+    if let Err(e) = res {
+        eprintln!("rjsh: {e}");
+    }
+
+    exit(1);
+}
+
+fn ast_to_job(ast: crate::parser::ast::Command) -> anyhow::Result<Job> {
+    let background = ast.background;
+    let name = ast.to_string();
+
+    let child_pid = fork_execute(ast)?;
+    let process = ExternalProcesss::new(child_pid, name.clone());
 
     Ok(Job::new(
         Pgid(child_pid.0),
         vec![Box::new(process)],
         Status::Running,
-        ast.background,
-        ast.to_string(),
+        background,
+        name,
     ))
 }
 
 pub fn execute_command(
     shell: &mut dyn Shell,
-    command: &crate::parser::ast::Command,
+    command: crate::parser::ast::Command,
 ) -> anyhow::Result<Option<i32>> {
     let mut exit_code = None;
-    match crate::builtins::get_builtin(command) {
+    match crate::builtins::get_builtin(&command) {
         Some(builtin) => {
             exit_code = Some(builtin.call(shell, &command.args).unwrap_error_with_print());
         }
         None => {
+            let background = command.background;
             let mut job = ast_to_job(command)?;
 
-            job.update(!command.background)?;
+            job.update(!background)?;
             //TODO: Handle NONE if it was stopped/killed by a signal
             match job.last_status {
                 Status::Done | Status::Killed => {

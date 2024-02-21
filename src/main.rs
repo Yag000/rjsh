@@ -31,7 +31,7 @@ fn main() -> anyhow::Result<()> {
                             // TODO: Do not add a successful exit to the history
                             rl.add_history_entry(line)?;
 
-                            match execute_command(&mut shell, &command) {
+                            match execute_command(&mut shell, command) {
                                 Ok(_) => {}
                                 Err(e) => eprintln!("rjsh: {e}"),
                             }
