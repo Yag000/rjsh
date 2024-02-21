@@ -140,7 +140,6 @@ pub fn execute_command(
             let mut job = ast_to_job(command)?;
 
             job.update(!background)?;
-            //TODO: Handle NONE if it was stopped/killed by a signal
             match job.last_status {
                 Status::Done | Status::Killed => {
                     exit_code = Some(
