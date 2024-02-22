@@ -175,3 +175,41 @@ impl ExternalProcesss {
         ExternalProcesss { name, pid, status }
     }
 }
+
+#[derive(Debug)]
+pub struct InternalProcess {
+    name: String,
+    status: ProcessStatus,
+}
+
+impl Process for InternalProcess {
+    fn pid(&self) -> ProcessId {
+        panic!("Internal process does not have a pid");
+    }
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn status(&self) -> Status {
+        self.status.status
+    }
+
+    fn exit_status(&self) -> Option<ExitStatus> {
+        self.status.exit_status
+    }
+
+    fn wait(&mut self, _blocking: bool) -> Result<Status, anyhow::Error> {
+        Ok(self.status.status)
+    }
+}
+
+impl InternalProcess {
+    pub fn new(name: String, exit_code: i32) -> Self {
+        let status = ProcessStatus {
+            status: Status::Done,
+            exit_status: Some(ExitStatusEnum::Done(exit_code).into()),
+        };
+        InternalProcess { name, status }
+    }
+}

@@ -8,11 +8,12 @@ use std::{
 use nix::unistd::{dup2, execvp, fork, getpid, setpgid, ForkResult, Pid};
 
 use crate::{
+    builtins::get_builtin,
     error::UnwrapPrintError,
     parser::ast::{Redirectee, Redirection, RedirectionPermission, RedirectionType},
     proc::{
         job::{Job, Pgid},
-        ExternalProcesss, ProcessId, Status,
+        ExternalProcesss, InternalProcess, ProcessId, Status,
     },
     shell::Shell,
 };
@@ -81,11 +82,26 @@ fn prepare_child(ast: &crate::parser::ast::Command, pgid: Pgid) {
     }
 }
 
-fn fork_execute(ast: crate::parser::ast::Command) -> anyhow::Result<ProcessId> {
+enum RjshForkResult {
+    Child(ProcessId),
+    Exit(i32),
+}
+
+// We should not have this mutable reference, it actually changes the main shell,
+// which is pretty bad.
+fn fork_execute(
+    shell: &mut dyn Shell,
+    ast: crate::parser::ast::Command,
+) -> anyhow::Result<RjshForkResult> {
+    if let Some(builtin) = get_builtin(&ast) {
+        let exit_code = builtin.call(shell, &ast.args).unwrap_error_with_print();
+        return Ok(RjshForkResult::Exit(exit_code));
+    }
+
     let fork_result = unsafe { fork()? };
 
     if let ForkResult::Parent { child } = fork_result {
-        return Ok(ProcessId(child.as_raw()));
+        return Ok(RjshForkResult::Child(ProcessId(child.as_raw())));
     }
 
     prepare_child(&ast, Pgid(0));
@@ -110,53 +126,57 @@ fn fork_execute(ast: crate::parser::ast::Command) -> anyhow::Result<ProcessId> {
     exit(1);
 }
 
-fn ast_to_job(ast: crate::parser::ast::Command) -> anyhow::Result<Job> {
+fn ast_to_job(shell: &mut dyn Shell, ast: crate::parser::ast::Command) -> anyhow::Result<Job> {
     let background = ast.background;
     let name = ast.to_string();
 
-    let child_pid = fork_execute(ast)?;
-    let process = ExternalProcesss::new(child_pid, name.clone());
-
-    Ok(Job::new(
-        Pgid(child_pid.0),
-        vec![Box::new(process)],
-        Status::Running,
-        background,
-        name,
-    ))
+    match fork_execute(shell, ast)? {
+        RjshForkResult::Child(child_pid) => {
+            let process = ExternalProcesss::new(child_pid, name.clone());
+            Ok(Job::new(
+                Pgid(child_pid.0),
+                vec![Box::new(process)],
+                Status::Running,
+                background,
+                name,
+            ))
+        }
+        // Better handle this. The job is not properly printed etc...
+        RjshForkResult::Exit(code) => {
+            let process = InternalProcess::new(name.clone(), code);
+            Ok(Job::new(
+                Pgid(0),
+                vec![Box::new(process)],
+                Status::Done,
+                background,
+                name,
+            ))
+        }
+    }
 }
 
 pub fn execute_command(
     shell: &mut dyn Shell,
     command: crate::parser::ast::Command,
 ) -> anyhow::Result<Option<i32>> {
-    let mut exit_code = None;
-    match crate::builtins::get_builtin(&command) {
-        Some(builtin) => {
-            exit_code = Some(builtin.call(shell, &command.args).unwrap_error_with_print());
-        }
-        None => {
-            let background = command.background;
-            let mut job = ast_to_job(command)?;
+    let background = command.background;
+    let mut job = ast_to_job(shell, command)?;
 
-            job.update(!background)?;
-            match job.last_status {
-                Status::Done | Status::Killed => {
-                    exit_code = Some(
-                        job.exit_status()
-                            .expect("rjsh: wow, that should not happen")
-                            .code()
-                            .expect("rjsh: wow, that should not happen again"),
-                    );
-                }
-                Status::Running | Status::Stopped => {
-                    shell.add_job(job);
-                }
-            }
+    job.update(!background)?;
+    match job.last_status {
+        Status::Done | Status::Killed => {
+            let code = job
+                .exit_status()
+                .expect("rjsh: wow, that should not happen")
+                .code()
+                .expect("rjsh: wow, that should not happen again");
+
+            std::env::set_var("?", code.to_string());
+            Ok(Some(code))
+        }
+        Status::Running | Status::Stopped => {
+            shell.add_job(job);
+            Ok(None)
         }
     }
-    if let Some(exit_code) = exit_code {
-        std::env::set_var("?", exit_code.to_string());
-    }
-    Ok(exit_code)
 }
