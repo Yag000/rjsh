@@ -87,15 +87,15 @@ enum RjshForkResult {
     Exit(i32),
 }
 
-// We should not have this mutable reference, it actually changes the main shell,
-// which is pretty bad.
 fn fork_execute(
     shell: &mut dyn Shell,
     ast: crate::parser::ast::Command,
 ) -> anyhow::Result<RjshForkResult> {
-    if let Some(builtin) = get_builtin(&ast) {
-        let exit_code = builtin.call(shell, &ast.args).unwrap_error_with_print();
-        return Ok(RjshForkResult::Exit(exit_code));
+    if !ast.background {
+        if let Some(builtin) = get_builtin(&ast) {
+            let exit_code = builtin.call(shell, &ast.args).unwrap_error_with_print();
+            return Ok(RjshForkResult::Exit(exit_code));
+        }
     }
 
     let fork_result = unsafe { fork()? };
@@ -105,6 +105,11 @@ fn fork_execute(
     }
 
     prepare_child(&ast, Pgid(0));
+
+    if let Some(builtin) = get_builtin(&ast) {
+        let exit_code = builtin.call(shell, &ast.args).unwrap_error_with_print();
+        exit(exit_code);
+    }
 
     // Don't forget to add the command name to the args
     let mut args = vec![ast.name.clone()];
