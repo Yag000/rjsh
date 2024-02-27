@@ -28,12 +28,16 @@ fn main() -> anyhow::Result<()> {
                 match parser.parse_command() {
                     Ok(command) => {
                         if !command.name.is_empty() {
-                            // TODO: Do not add a successful exit to the history
-                            rl.add_history_entry(line)?;
+                            let name = command.name.clone();
 
                             match execute_command(&mut shell, command) {
                                 Ok(_) => {}
-                                Err(e) => eprintln!("rjsh: {e}"),
+                                Err(e) => {
+                                    eprintln!("rjsh: {e}")
+                                }
+                            }
+                            if name != "exit" {
+                                rl.add_history_entry(line)?;
                             }
                         }
                     }
