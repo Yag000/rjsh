@@ -122,11 +122,9 @@ fn fork_execute(
 
     let c_name = CString::new(ast.name).unwrap();
 
-    let res = execvp(c_name.as_ref(), c_args.as_ref());
+    let Err(e) = execvp(c_name.as_ref(), c_args.as_ref());
 
-    if let Err(e) = res {
-        eprintln!("rjsh: {e}");
-    }
+    eprintln!("rjsh: {e}");
 
     exit(1);
 }

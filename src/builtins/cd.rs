@@ -21,12 +21,14 @@ impl BuiltIn for Cd {
             set_new_cwd(&home)?;
         } else {
             let path = args[0].clone();
-            if path == "-" {
-                let oldpwd = std::env::var("OLDPWD")?;
-                set_new_cwd(&oldpwd)?;
+
+            let new_cdw = if path == "-" {
+                std::env::var("OLDPWD")?
             } else {
-                set_new_cwd(&path)?;
-            }
+                path
+            };
+
+            set_new_cwd(&new_cdw)?;
         }
         Ok(0)
     }

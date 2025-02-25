@@ -76,7 +76,6 @@ impl Parser {
         Redirection::try_from((token, filename)).map_err(|s| ParseError::new(s, None))
     }
 
-    #[allow(unreachable_patterns)]
     pub fn parse_command(&mut self) -> Result<Command, ParseError> {
         let name = match self.current_token.clone() {
             Some(Token::String(s)) => s,
@@ -103,7 +102,6 @@ impl Parser {
                     background = true;
                     break;
                 }
-                _ => break,
             }
             self.read_token();
         }

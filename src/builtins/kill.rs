@@ -1,4 +1,4 @@
-use std::{str::FromStr, usize};
+use std::str::FromStr;
 
 use nix::sys::signal::Signal::{self, SIGTERM};
 

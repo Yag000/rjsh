@@ -40,7 +40,6 @@ impl Lexer {
         }
     }
 
-    #[allow(dead_code)]
     pub fn read_identifier(&mut self) -> String {
         let position = self.position;
         while let Some(ch) = self.ch {

@@ -36,6 +36,7 @@ fn main() -> anyhow::Result<()> {
                                     eprintln!("rjsh: {e}")
                                 }
                             }
+
                             if name != "exit" {
                                 rl.add_history_entry(line)?;
                             }
@@ -44,10 +45,7 @@ fn main() -> anyhow::Result<()> {
                     Err(e) => eprintln!("{e}"),
                 }
             }
-            Err(ReadlineError::Interrupted) => {
-                break;
-            }
-            Err(ReadlineError::Eof) => {
+            Err(ReadlineError::Interrupted | ReadlineError::Eof) => {
                 break;
             }
             Err(err) => {
