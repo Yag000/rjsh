@@ -10,8 +10,8 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn new(input: String) -> Lexer {
-        let mut l = Lexer {
+    pub fn new(input: String) -> Self {
+        let mut l = Self {
             input: input.chars().collect(),
             position: 0,
             read_position: 0,
@@ -60,7 +60,7 @@ impl Lexer {
             }
             self.read_char();
         }
-        self.input[position..self.position + 1].iter().collect()
+        self.input[position..=self.position].iter().collect()
     }
 
     fn match_rangle(&mut self) -> Token {
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_next_token_empty_inputs() {
-        test_eof("".to_string());
+        test_eof(String::new());
         test_eof(" ".to_string());
         test_eof("\t".to_string());
         test_eof("\n".to_string());

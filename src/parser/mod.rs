@@ -25,8 +25,8 @@ impl Display for ParseError {
 }
 
 impl ParseError {
-    fn new(message: String, token: Option<Token>) -> Self {
-        ParseError { message, token }
+    const fn new(message: String, token: Option<Token>) -> Self {
+        Self { message, token }
     }
 }
 
@@ -38,9 +38,9 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new(input: String) -> Parser {
+    pub fn new(input: String) -> Self {
         let lexer = Lexer::new(input);
-        let mut p = Parser {
+        let mut p = Self {
             lexer,
             current_token: None,
             peek_token: None,
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_parse_command_empty_inputs() {
-        assert_empty("".to_string());
+        assert_empty(String::new());
         assert_empty(" ".to_string());
         assert_empty("\t".to_string());
         assert_empty("\n".to_string());
@@ -144,7 +144,7 @@ mod tests {
                 redirections: Vec::new(),
                 background: false,
             }
-        )
+        );
     }
 
     #[test]
@@ -282,7 +282,7 @@ mod tests {
                 redirections: Vec::new(),
                 background: true,
             }
-        )
+        );
     }
 
     #[test]

@@ -32,8 +32,8 @@ impl Job {
         last_status: Status,
         background: bool,
         name: String,
-    ) -> Job {
-        Job {
+    ) -> Self {
+        Self {
             id: 0,
             // Find a better way of dealing with this.
             // Maybe leader should be on the processes itself ?

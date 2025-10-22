@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Token {
     String(String),
 
@@ -18,15 +18,15 @@ pub enum Token {
 impl Display for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Token::String(s) => write!(f, "{}", s),
-            Token::Langle => write!(f, "<"),
-            Token::Rangle => write!(f, ">"),
-            Token::RangleF => write!(f, ">|"),
-            Token::DoubleRangle => write!(f, ">>"),
-            Token::Rangle2 => write!(f, "2>"),
-            Token::Rangle2F => write!(f, "2>|"),
-            Token::DoubleRangle2 => write!(f, "2>>"),
-            Token::And => write!(f, "&"),
+            Self::String(s) => write!(f, "{s}"),
+            Self::Langle => write!(f, "<"),
+            Self::Rangle => write!(f, ">"),
+            Self::RangleF => write!(f, ">|"),
+            Self::DoubleRangle => write!(f, ">>"),
+            Self::Rangle2 => write!(f, "2>"),
+            Self::Rangle2F => write!(f, "2>|"),
+            Self::DoubleRangle2 => write!(f, "2>>"),
+            Self::And => write!(f, "&"),
         }
     }
 }

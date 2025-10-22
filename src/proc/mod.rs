@@ -7,7 +7,7 @@ use nix::{
 pub mod job;
 pub mod job_table;
 
-#[derive(EnumStringify, Clone, Copy, Debug, PartialEq)]
+#[derive(EnumStringify, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
     Running,
     Killed,
@@ -16,7 +16,7 @@ pub enum Status {
 }
 
 impl Status {
-    fn is_finished(&self) -> bool {
+    const fn is_finished(&self) -> bool {
         match self {
             Self::Running | Self::Stopped => false,
             Self::Done | Self::Killed => true,
@@ -38,12 +38,12 @@ enum ExitStatusEnum {
 
 impl From<ExitStatusEnum> for ExitStatus {
     fn from(exit_status: ExitStatusEnum) -> Self {
-        ExitStatus { exit_status }
+        Self { exit_status }
     }
 }
 
 impl ExitStatus {
-    pub fn code(&self) -> Option<i32> {
+    pub const fn code(&self) -> Option<i32> {
         match &self.exit_status {
             ExitStatusEnum::Done(code) => Some(*code),
             ExitStatusEnum::Killed(_) => None,
@@ -51,7 +51,7 @@ impl ExitStatus {
         }
     }
 
-    pub fn killed(&self) -> Option<i32> {
+    pub const fn killed(&self) -> Option<i32> {
         match &self.exit_status {
             ExitStatusEnum::Done(_) => None,
             ExitStatusEnum::Killed(sig) => Some(*sig),
@@ -59,7 +59,7 @@ impl ExitStatus {
         }
     }
 
-    pub fn stopped_signal(&self) -> Option<i32> {
+    pub const fn stopped_signal(&self) -> Option<i32> {
         match &self.exit_status {
             ExitStatusEnum::Done(_) => None,
             ExitStatusEnum::Killed(_) => None,
@@ -73,14 +73,14 @@ impl From<Option<ExitStatus>> for Status {
         match value {
             Some(status) => {
                 if status.stopped_signal().is_some() {
-                    Status::Stopped
+                    Self::Stopped
                 } else if status.killed().is_some() {
-                    Status::Killed
+                    Self::Killed
                 } else {
-                    Status::Done
+                    Self::Done
                 }
             }
-            None => Status::Running,
+            None => Self::Running,
         }
     }
 }
@@ -93,7 +93,7 @@ struct ProcessStatus {
 
 impl Default for ProcessStatus {
     fn default() -> Self {
-        ProcessStatus {
+        Self {
             status: Status::Running,
             exit_status: None,
         }
@@ -104,17 +104,17 @@ impl ProcessStatus {
     pub fn update(&mut self, status: WaitStatus) {
         match status {
             WaitStatus::Exited(_, code) => {
-                self.exit_status = Some(ExitStatusEnum::Done(code).into())
+                self.exit_status = Some(ExitStatusEnum::Done(code).into());
             }
             WaitStatus::Signaled(_, sig, _) => {
-                self.exit_status = Some(ExitStatusEnum::Killed(sig as i32).into())
+                self.exit_status = Some(ExitStatusEnum::Killed(sig as i32).into());
             }
             WaitStatus::Stopped(_, sig) | WaitStatus::PtraceEvent(_, sig, _) => {
-                self.exit_status = Some(ExitStatusEnum::Stopped(sig as i32).into())
+                self.exit_status = Some(ExitStatusEnum::Stopped(sig as i32).into());
             }
             WaitStatus::PtraceSyscall(_) | WaitStatus::Continued(_) => self.exit_status = None,
             WaitStatus::StillAlive => {}
-        };
+        }
         self.status = Status::from(self.exit_status);
     }
 }
@@ -172,7 +172,7 @@ impl Process for ExternalProcesss {
 impl ExternalProcesss {
     pub fn new(pid: ProcessId, name: String) -> Self {
         let status = ProcessStatus::default();
-        ExternalProcesss { name, pid, status }
+        Self { name, pid, status }
     }
 }
 
@@ -210,6 +210,6 @@ impl InternalProcess {
             status: Status::Done,
             exit_status: Some(ExitStatusEnum::Done(exit_code).into()),
         };
-        InternalProcess { name, status }
+        Self { name, status }
     }
 }

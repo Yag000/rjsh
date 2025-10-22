@@ -9,7 +9,7 @@ fn main() -> anyhow::Result<()> {
     let mut rl = RjshEditor::new()?;
 
     let home_dir = std::env::var("HOME")?;
-    let history_path = format!("{}/.rjsh_history", home_dir);
+    let history_path = format!("{home_dir}/.rjsh_history");
     if rl.load_history(&history_path).is_err() {
         std::fs::File::create(&history_path)?;
     }
@@ -33,7 +33,7 @@ fn main() -> anyhow::Result<()> {
                             match execute_command(&mut shell, command) {
                                 Ok(_) => {}
                                 Err(e) => {
-                                    eprintln!("rjsh: {e}")
+                                    eprintln!("rjsh: {e}");
                                 }
                             }
 
@@ -49,7 +49,7 @@ fn main() -> anyhow::Result<()> {
                 break;
             }
             Err(err) => {
-                println!("rjsh: {:?}", err);
+                println!("rjsh: {err:?}");
                 break;
             }
         }

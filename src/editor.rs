@@ -53,7 +53,7 @@ pub struct RjshEditor {
 }
 
 impl RjshEditor {
-    pub fn new() -> Result<RjshEditor, ReadlineError> {
+    pub fn new() -> Result<Self, ReadlineError> {
         let config = Config::builder()
             .max_history_size(10_000)?
             .history_ignore_space(true)
@@ -63,7 +63,7 @@ impl RjshEditor {
         let mut internal = rustyline::Editor::with_config(config)?;
         internal.set_helper(Some(RjshEditorHelper(FilenameCompleter::new())));
 
-        Ok(RjshEditor { internal })
+        Ok(Self { internal })
     }
 
     pub fn readline(&mut self, prompt: &str) -> Result<String, ReadlineError> {

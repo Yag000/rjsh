@@ -9,7 +9,7 @@ impl UnwrapPrintError for Result<i32, anyhow::Error> {
         match self {
             Ok(value) => value,
             Err(error) => {
-                eprintln!("rjsh: {}", error);
+                eprintln!("rjsh: {error}");
                 1
             }
         }

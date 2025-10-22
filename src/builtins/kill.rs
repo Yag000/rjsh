@@ -36,7 +36,7 @@ impl BuiltIn for Kill {
         } else {
             let pid = pid_s.parse::<i32>()?;
             nix::sys::signal::kill(nix::unistd::Pid::from_raw(pid), signal)?;
-        };
+        }
 
         Ok(0)
     }

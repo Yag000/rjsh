@@ -35,7 +35,7 @@ impl JobTable {
         }
     }
 
-    pub fn size(&self) -> usize {
+    pub const fn size(&self) -> usize {
         self.size
     }
 
@@ -44,7 +44,7 @@ impl JobTable {
         for job in self.table.iter_mut().flatten() {
             job.update(false)?;
             if job.last_status.is_finished() {
-                to_remove.push(job.id)
+                to_remove.push(job.id);
             }
         }
 

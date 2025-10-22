@@ -2,13 +2,13 @@ use std::fmt::{self, Display, Formatter};
 
 use crate::lexer::token::Token;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Redirectee {
     FileName(String),
     FileDescriptor(i32),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RedirectionType {
     Stdin,
     Stdout,
@@ -19,15 +19,15 @@ impl TryFrom<Token> for RedirectionType {
     type Error = String;
     fn try_from(value: Token) -> Result<Self, Self::Error> {
         match value {
-            Token::Langle => Ok(RedirectionType::Stdin),
-            Token::Rangle2 | Token::Rangle2F | Token::DoubleRangle2 => Ok(RedirectionType::Stderr),
-            Token::Rangle | Token::RangleF | Token::DoubleRangle => Ok(RedirectionType::Stdout),
+            Token::Langle => Ok(Self::Stdin),
+            Token::Rangle2 | Token::Rangle2F | Token::DoubleRangle2 => Ok(Self::Stderr),
+            Token::Rangle | Token::RangleF | Token::DoubleRangle => Ok(Self::Stdout),
             _ => Err("Invalid redirection marker".into()),
         }
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RedirectionPermission {
     Truncate,
     Append,
@@ -37,15 +37,15 @@ impl TryFrom<Token> for RedirectionPermission {
     type Error = String;
     fn try_from(value: Token) -> Result<Self, Self::Error> {
         match value {
-            Token::Langle | Token::Rangle | Token::Rangle2 => Ok(RedirectionPermission::Standard),
-            Token::Rangle2F | Token::RangleF => Ok(RedirectionPermission::Truncate),
-            Token::DoubleRangle2 | Token::DoubleRangle => Ok(RedirectionPermission::Append),
+            Token::Langle | Token::Rangle | Token::Rangle2 => Ok(Self::Standard),
+            Token::Rangle2F | Token::RangleF => Ok(Self::Truncate),
+            Token::DoubleRangle2 | Token::DoubleRangle => Ok(Self::Append),
             _ => Err("Invalid redirection marker".into()),
         }
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Redirection {
     pub redirectee: Redirectee,
     pub type_: RedirectionType,
@@ -57,7 +57,7 @@ impl TryFrom<(Token, String)> for Redirection {
     fn try_from((token, s): (Token, String)) -> Result<Self, Self::Error> {
         let type_ = RedirectionType::try_from(token.clone())?;
         let permissions = RedirectionPermission::try_from(token)?;
-        Ok(Redirection {
+        Ok(Self {
             type_,
             permissions,
             redirectee: Redirectee::FileName(s),
@@ -66,15 +66,15 @@ impl TryFrom<(Token, String)> for Redirection {
 }
 
 impl Redirection {
-    pub fn new(
+    pub const fn new(
         redirectee: Redirectee,
         type_: RedirectionType,
         permissions: RedirectionPermission,
     ) -> Self {
-        Redirection {
+        Self {
+            redirectee,
             type_,
             permissions,
-            redirectee,
         }
     }
 }
@@ -91,20 +91,20 @@ impl Display for Command {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} ", self.name)?;
         for arg in &self.args {
-            write!(f, "{} ", arg)?;
+            write!(f, "{arg} ")?;
         }
         Ok(())
     }
 }
 
 impl Command {
-    pub fn new(
+    pub const fn new(
         name: String,
         args: Vec<String>,
         redirections: Vec<Redirection>,
         background: bool,
-    ) -> Command {
-        Command {
+    ) -> Self {
+        Self {
             name,
             args,
             redirections,
