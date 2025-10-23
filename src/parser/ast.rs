@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-use crate::lexer::token::Token;
+use crate::parser::token::Token;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Redirectee {
@@ -79,7 +79,7 @@ impl Redirection {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Command {
     pub name: String,
     pub args: Vec<String>,

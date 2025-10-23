@@ -1,6 +1,6 @@
 use rjsh::editor::RjshEditor;
 use rjsh::exec::execute_command;
-use rjsh::parser::Parser;
+use rjsh::parser::parse_command;
 use rjsh::prompt::get_prompt;
 use rjsh::shell::Shell;
 use rustyline::error::ReadlineError;
@@ -24,8 +24,7 @@ fn main() -> anyhow::Result<()> {
                 if line.trim() == "" {
                     continue;
                 }
-                let mut parser = Parser::new(line.clone());
-                match parser.parse_command() {
+                match parse_command(line.as_str()) {
                     Ok(command) => {
                         if !command.name.is_empty() {
                             let name = command.name.clone();

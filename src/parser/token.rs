@@ -30,3 +30,19 @@ impl Display for Token {
         }
     }
 }
+
+impl From<&str> for Token {
+    fn from(s: &str) -> Self {
+        match s {
+            "<" => Self::Langle,
+            ">" => Self::Rangle,
+            ">|" => Self::RangleF,
+            ">>" => Self::DoubleRangle,
+            "2>" => Self::Rangle2,
+            "2>|" => Self::Rangle2F,
+            "2>>" => Self::DoubleRangle2,
+            "&" => Self::And,
+            _ => Self::String(s.to_string()),
+        }
+    }
+}

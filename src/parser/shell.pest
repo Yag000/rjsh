@@ -1,0 +1,23 @@
+// shell.pest
+WHITESPACE  = _{ " " | "\t" | "\n" }
+
+command      = { WHITESPACE? ~ name ~ arg* ~ redirection* ~ background? ~ EOI }
+name         = @{ (ASCII_ALPHANUMERIC | "_" | "-" | "." | "/")+ }
+arg          = @{ (!redir_op ~ !background_op ~ (!WHITESPACE ~ ANY))+ }
+
+redirection  = { redir_op ~ WHITESPACE* ~ redirectee }
+redirectee   = @{ (!WHITESPACE  ~ !redir_op ~ ANY)+ }
+
+redir_op     = {
+      ">|"       // RangleF
+    | ">>"       // DoubleRangle
+    | "2>|"      // Rangle2F
+    | "2>>"      // DoubleRangle2
+    | "2>"       // Rangle2
+    | "<"        // Langle
+    | ">"        // Rangle
+}
+
+background    = { "&" }
+background_op = { "&" }
+
